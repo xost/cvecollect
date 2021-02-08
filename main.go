@@ -14,8 +14,8 @@ const (
 
 var (
 	loglevel = "INFO"
-	addr     = "127.0.0.1"
-	port     = "8080"
+	addr     = ""
+	port     = ""
 	dl       *log.Logger
 	el       *log.Logger
 	il       *log.Logger
@@ -26,21 +26,22 @@ func init() {
 	// LOGLEVEL = {INFO,ERROR,DEBUG}
 	// ADDR
 	// PORT
-	_loglevel := os.Getenv("LOGLEVEL")
-	switch _loglevel {
+	loglevel = os.Getenv("LOGLEVEL")
+	switch loglevel {
 	case "INFO", "WARN", "ERROR", "DEBUG":
-		loglevel = _loglevel
 	case "":
+		loglevel = "INFO"
 	default:
 		log.Println("Wrong LOGLEVEL")
 	}
-	_addr := os.Getenv("ADDR")
-	if _addr != "" {
-		addr = _addr
+	addr = os.Getenv("ADDR")
+	if addr == "" {
+		addr = "0.0.0.0"
 	}
-	_port := os.Getenv("PORT")
-	if _port != "" {
-		port = _port
+	port = os.Getenv("PORT")
+	log.Println(port)
+	if port == "" {
+		log.Fatal("PORT must be set")
 	}
 }
 
@@ -67,7 +68,11 @@ func main() {
 
 	http.HandleFunc("/hello", handleHello)
 
-	http.ListenAndServe(":8080", nil)
+	log.Println(addr + ":" + port)
+	err := http.ListenAndServe(addr+":"+port, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func handleHello(w http.ResponseWriter, r *http.Request) {

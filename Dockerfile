@@ -1,21 +1,16 @@
 FROM golang:1.14
 
+ARG ADDR
+ARG PORT
+ARG LOGLEVEL
+
 WORKDIR /app
 
-COPY go.mod \
-  go.sum \
-  main.go \
+COPY main.go \
   types.go \
-  cvemonitor_test.go \
   debian.go \
-  ./
-
-RUN go mod download
-
-#COPY . .
+  /app/
 
 RUN go build -o app .
 
-EXPOSE 8080
-
-CMD ./app
+CMD "/app/app"
