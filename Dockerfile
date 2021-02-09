@@ -2,15 +2,18 @@ FROM golang:1.14
 
 ARG ADDR
 ARG PORT
-ARG LOGLEVEL
+ARG RLOG_LOG_LEVEL
 
 WORKDIR /app
 
-COPY main.go \
+COPY go.mod \
+  go.sum \
+  main.go \
   types.go \
   debian.go \
   /app/
 
+RUN go mod download
 RUN go build -o app .
 
 CMD "/app/app"

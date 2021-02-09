@@ -11,7 +11,9 @@ type debian struct {
 }
 
 func NewDebian() *debian {
-	return &debian{}
+	return &debian{
+		debianSource,
+	}
 }
 
 func (d *debian) SetURL(url string) {

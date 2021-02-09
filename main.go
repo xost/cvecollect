@@ -1,10 +1,10 @@
 package main
 
 import (
-	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
+
+	"github.com/romana/rlog"
 )
 
 const (
@@ -16,66 +16,69 @@ var (
 	loglevel = "INFO"
 	addr     = ""
 	port     = ""
-	dl       *log.Logger
-	el       *log.Logger
-	il       *log.Logger
 )
 
 func init() {
-	// env config
-	// LOGLEVEL = {INFO,ERROR,DEBUG}
+	// init config
 	// ADDR
 	// PORT
-	loglevel = os.Getenv("LOGLEVEL")
-	switch loglevel {
-	case "INFO", "WARN", "ERROR", "DEBUG":
-	case "":
-		loglevel = "INFO"
-	default:
-		log.Println("Wrong LOGLEVEL")
-	}
 	addr = os.Getenv("ADDR")
 	if addr == "" {
+		rlog.Warn("ADDR env is not set. Use default address 0.0.0.0.")
 		addr = "0.0.0.0"
 	}
 	port = os.Getenv("PORT")
-	log.Println(port)
 	if port == "" {
-		log.Fatal("PORT must be set")
+		rlog.Critical("PORT must be set.")
 	}
 }
 
 func main() {
-	//lf, err := os.OpenFile(logFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 644)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//defer lf.Close()
-	switch loglevel {
-	case "INFO":
-		dl = log.New(ioutil.Discard, "", 0)
-		el = log.New(ioutil.Discard, "", 0)
-		il = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	case "ERROR":
-		dl = log.New(ioutil.Discard, "", 0)
-		el = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
-		il = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	case "DEBUG":
-		dl = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-		el = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
-		il = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	}
+	http.Handle("/help", logWrapper(handleHelp))
+	http.Handle("/update", logWrapper(handleUpdate))
 
-	http.HandleFunc("/hello", handleHello)
-
-	log.Println(addr + ":" + port)
+	rlog.Info("Listen on " + addr + ":" + port)
 	err := http.ListenAndServe(addr+":"+port, nil)
 	if err != nil {
-		log.Fatal(err)
+		rlog.Critical(err)
 	}
 }
 
-func handleHello(w http.ResponseWriter, r *http.Request) {
+func logWrapper(n http.HandlerFunc) http.Handler {
+	return http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			rlog.Debug(
+				"Method:", r.Method,
+				"Path:", r.URL.EscapedPath(),
+			)
+			n.ServeHTTP(w, r)
+		},
+	)
+}
+
+func handleHelp(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("HELLO\n"))
+	w.Write([]byte("/api/update – обновляет базу, загружая всю необходимую информацию из источников\n"))
+	w.Write([]byte("/api/cve/{CVE-ID}?source={SOURCE-NAME}&pkg={PKG-NAME}, т.е. указание ID CVE, источника ифнормации (Redhat, Ubuntu, NIST, Debian), и имени пакета\n"))
+}
+
+func handleUpdate(w http.ResponseWriter, r *http.Request) {
+	//only debian at now
+	deb := NewDebian()
+	data := make([]byte, 0)
+	_, err := deb.Read(&data)
+	if err != nil {
+		rlog.Error(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	debCve, err := deb.Parse(data)
+	if err != nil {
+		rlog.Error(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	_ = debCve
+	w.WriteHeader(http.StatusOK)
+	w.Write(data)
 }
