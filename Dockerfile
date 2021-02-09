@@ -2,7 +2,7 @@ FROM golang:1.14
 
 ARG ADDR
 ARG PORT
-ARG LOGLEVEL
+ARG RLOG_LOG_LEVEL
 
 WORKDIR /app
 
@@ -12,5 +12,7 @@ COPY main.go \
   /app/
 
 RUN go build -o app .
+
+EXPOSE ${PORT}
 
 CMD "/app/app"
