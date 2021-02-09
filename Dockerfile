@@ -16,4 +16,6 @@ COPY go.mod \
 RUN go mod download
 RUN go build -o app .
 
+EXPOSE ${PORT}
+
 CMD "/app/app"
