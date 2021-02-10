@@ -55,8 +55,7 @@ func TestRedisStore(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	resp := Response{}
-	err = json.Unmarshal(raw, &resp)
+	resp, err := d.Parse(raw)
 	if err != nil {
 		t.Error(err)
 	}

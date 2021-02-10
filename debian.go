@@ -12,7 +12,7 @@ type debian struct {
 
 func NewDebian() *debian {
 	return &debian{
-		debianSource,
+		sources["debian"],
 	}
 }
 
@@ -39,11 +39,11 @@ func (d *debian) Read(data *[]byte) (int, error) {
 	return len(*data), nil
 }
 
-func (d *debian) Parse(raw []byte) ([]CveData, error) {
-	j := make(Response)
+func (d *debian) Parse(raw []byte) (Response, error) {
+	j := Response{}
 	err := json.Unmarshal(raw, &j)
 	if err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return j, nil
 }
