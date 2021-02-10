@@ -4,7 +4,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/go-redis/redis"
+	"github.com/gomodule/redigo/redis"
+	"github.com/nitishm/go-rejson"
 	"github.com/romana/rlog"
 )
 
@@ -16,7 +17,8 @@ var (
 	loglevel = "INFO"
 	addr     = ""
 	port     = ""
-	db       *redis.Conn
+	db       redis.Conn
+	rh       *rejson.Handler
 )
 
 func init() {
@@ -42,6 +44,8 @@ func init() {
 	if err != nil {
 		rlog.Critical(err)
 	}
+	rh = rejson.NewReJSONHandler()
+	rh.SetRedigoClient(db)
 }
 
 func main() {
@@ -90,7 +94,15 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	_ = debCve
+	res, err := rh.JSONSet("debian", ".", debCve)
+	if err != nil || res.(string) != "OK" {
+		rlog.Error(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Failed to update CVE data"))
+		return
+	}
+	rlog.Info("CVE data was updated")
+	rlog.Trace(5, debCve)
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	w.Write([]byte("CVE data was updated"))
 }
