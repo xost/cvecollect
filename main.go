@@ -4,18 +4,19 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/go-redis/redis"
 	"github.com/romana/rlog"
 )
 
 const (
 	debianSource = "https://security-tracker.debian.org/tracker/data/json"
-	logFile      = "info.log"
 )
 
 var (
 	loglevel = "INFO"
 	addr     = ""
 	port     = ""
+	db       *redis.Conn
 )
 
 func init() {
@@ -31,9 +32,20 @@ func init() {
 	if port == "" {
 		rlog.Critical("PORT must be set.")
 	}
+	dbPort := os.Getenv("DBPORT")
+	if dbPort == "" {
+		rlog.Warn("DBPORT env is not set. Use default redis port 6379.")
+		dbPort = "6379"
+	}
+	var err error
+	db, err = redis.Dial("tcp", ":"+dbPort)
+	if err != nil {
+		rlog.Critical(err)
+	}
 }
 
 func main() {
+	defer db.Close()
 	http.Handle("/help", logWrapper(handleHelp))
 	http.Handle("/update", logWrapper(handleUpdate))
 

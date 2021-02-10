@@ -1,9 +1,9 @@
 module github.com/xost/cvecollect
 
-go 1.15
+go 1.14
 
 require (
-	github.com/go-redis/redis v6.15.9+incompatible // indirect
+	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-redis/redis/v8 v8.5.0
 	github.com/gomodule/redigo v1.8.3
 	github.com/nitishm/go-rejson v2.0.0+incompatible
