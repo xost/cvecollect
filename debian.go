@@ -39,8 +39,8 @@ func (d *debian) Read(data *[]byte) (int, error) {
 	return len(*data), nil
 }
 
-func (d *debian) Parse(raw []byte) (Response, error) {
-	j := Response{}
+func (d *debian) Parse(raw []byte) (response, error) {
+	j := response{}
 	err := json.Unmarshal(raw, &j)
 	if err != nil {
 		return nil, err

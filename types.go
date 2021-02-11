@@ -1,16 +1,17 @@
 package main
 
-type CveData struct {
+type cveData struct {
 	Description string             `json:"description"`
-	Releases    map[string]Release `json:"releases"`
+	Releases    map[string]release `json:"releases"`
 	Scope       string             `json:"scope"`
 }
 
-type Release struct {
-	FixedVersion string            `json:"fixed_version"`
-	Repositories map[string]string `json:"repositories"`
-	Status       string            `json:"status"`
-	Urgency      string            `json:"urgency"`
+type release struct {
+	FixedVersion string     `json:"fixed_version"`
+	Repositories repository `json:"repositories"`
+	Status       string     `json:"status"`
+	Urgency      string     `json:"urgency"`
 }
 
-type Response map[string]map[string]CveData
+type response map[string]map[string]cveData
+type repository map[string]string

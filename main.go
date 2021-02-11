@@ -162,7 +162,7 @@ func handleGetCve(w http.ResponseWriter, r *http.Request) { //todo cut and devid
 			w.Write([]byte("Internal server error"))
 			return
 		}
-		resp := Response{}
+		resp := response{}
 		err = json.Unmarshal(rawBytes, &resp)
 		if err != nil {
 			rlog.Error("Internal server error")
@@ -171,11 +171,11 @@ func handleGetCve(w http.ResponseWriter, r *http.Request) { //todo cut and devid
 			w.Write([]byte("Internal server error"))
 			return
 		}
-		resp1 := Response{}
+		resp1 := response{}
 		for k, v := range resp { //looking for particular cveid
 			if cve, ok := v[cveid]; ok {
 				rlog.Debug(k, cve)
-				resp1[k] = map[string]CveData{cveid: cve}
+				resp1[k] = map[string]cveData{cveid: cve}
 			}
 		}
 		bytesResponse, err := json.Marshal(resp1)
