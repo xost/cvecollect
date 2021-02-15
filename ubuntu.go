@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+
+	"golang.org/x/net/html"
 )
 
 type ubuntu struct {
@@ -18,13 +21,13 @@ func NewUbuntu() *ubuntu {
 	}
 }
 
-func (d *ubuntu) SetURL(url string) {
-	d.url = url
+func (p *ubuntu) SetURL(url string) {
+	p.url = url
 }
 
-func (d *ubuntu) Read(data *[]byte) (int, error) {
+func (p *ubuntu) Read(data *[]byte) (int, error) {
 	c := http.Client{}
-	req, err := http.NewRequest("GET", d.url, nil)
+	req, err := http.NewRequest("GET", p.url, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -41,11 +44,19 @@ func (d *ubuntu) Read(data *[]byte) (int, error) {
 	return len(*data), nil
 }
 
-func (d *ubuntu) Parse(raw []byte) (response, error) {
+func (p *ubuntu) Parse(raw []byte) (response, error) {
 	j := response{}
 	err := json.Unmarshal(raw, &j)
 	if err != nil {
 		return nil, err
 	}
 	return j, nil
+}
+
+func (p *ubuntu) listNodes(raw []byte) []string {
+	r := bytes.NewReader(raw)
+	t := html.NewTokenizer(r)
+	for tokType := t.Next(); tokType != html.ErrorToken; tokType = t.Next() {
+	}
+	return []string{}
 }
