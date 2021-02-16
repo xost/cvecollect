@@ -3,11 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gomodule/redigo/redis"
-	"github.com/nitishm/go-rejson"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/gomodule/redigo/redis"
+	"github.com/nitishm/go-rejson"
 )
 
 var (
@@ -24,7 +25,7 @@ func Deb(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	resp := new(Response)
+	resp := new(response)
 	err = json.Unmarshal(raw, &resp)
 	if err != nil {
 		t.Error(err)
@@ -34,13 +35,13 @@ func Deb(t *testing.T) {
 
 func DebRequest(t *testing.T) {
 	d := debian{}
-	d.SetURL(debianSource)
+	d.SetURL(sources["debian"])
 	raw := make([]byte, 0)
 	_, err := d.Read(&raw)
 	if err != nil {
 		t.Error(err)
 	}
-	resp := Response{}
+	resp := response{}
 	err = json.Unmarshal(raw, &resp)
 	if err != nil {
 		t.Error(err)
@@ -48,7 +49,7 @@ func DebRequest(t *testing.T) {
 	fmt.Println(resp["fuse3"]["CVE-2018-10906"])
 }
 
-func TestRedisStore(t *testing.T) {
+func RedisStore(t *testing.T) {
 	d := NewDebian()
 	raw := make([]byte, 0)
 	_, err := d.Read(&raw)
@@ -77,4 +78,15 @@ func TestRedisStore(t *testing.T) {
 	//		fmt.Println("\t", kk)
 	//	}
 	//}
+}
+
+func TestUbuntuListTokens(t *testing.T) {
+	u := NewUbuntu()
+	raw := make([]byte, 0)
+	_, err := u.Read(&raw)
+	if err != nil {
+		t.Error(err)
+	}
+	nds, _ := u.listNodes(raw)
+	fmt.Println(nds)
 }

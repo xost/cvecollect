@@ -16,6 +16,7 @@ import (
 var (
 	sources = map[string]string{
 		"debian": "https://security-tracker.debian.org/tracker/data/json",
+		"ubuntu": "https://git.launchpad.net/ubuntu-cve-tracker/tree/active",
 	}
 	addr = ""
 	port = ""
