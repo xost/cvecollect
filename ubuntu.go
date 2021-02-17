@@ -122,4 +122,5 @@ func (u *ubuntu) ParseRaw(raw []byte) (pkgs []string, cve cveData, err error) {
 }
 
 func (u *ubuntu) getCve(data string) (string, cveData, error) {
+	lines := strings.Split(data, "\n")
 }
