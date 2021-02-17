@@ -127,8 +127,9 @@ func (u *ubuntu) parseText(data string) (Response, error) {
 	descr := ""
 	urgency := ""
 	cveid := ""
+	fixedVersion := ""
 	cve := make(map[string]CveData)
-	releases := []Release{}
+	releases := map[string]Release{}
 	for i := 0; i < len(lines); i++ { //got cveid
 		if strings.HasPrefix(lines[i], "Candidate:") { //maybe should add ' && cveid=="" '
 			cveid = strings.TrimPrefix(lines[i], "Candidate")
@@ -170,7 +171,12 @@ func (u *ubuntu) parseText(data string) (Response, error) {
 				if len(status_version) > 1 {
 					releaseVersion = strings.Trim((status_version[1]), "()")
 				}
-				releases[""]
+				releases[releaseName] = Release{
+					fixedVersion,
+					map[string]string{releaseName: releaseVersion},
+					status,
+					urgency,
+				}
 			}
 			continue
 		}
