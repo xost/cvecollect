@@ -1,5 +1,11 @@
 package main
 
+type CveData1 struct {
+	Description string             `json:"description"`
+	Releases    map[string]Release `json:"releases"`
+	Scope       string             `json:"scope"`
+}
+
 type CveData struct {
 	Description string             `json:"description"`
 	Releases    map[string]Release `json:"releases"`

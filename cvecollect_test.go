@@ -9,10 +9,64 @@ import (
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/nitishm/go-rejson"
+	"github.com/romana/rlog"
 )
 
 var (
-	jsonFileName = "debTest.json"
+	jsonFileName  = "debTest.json"
+	ubuntuCveText = `Candidate: CVE-2018-10906
+PublicDate: 2018-07-24 20:29:00 UTC
+References:
+ https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-10906
+ https://github.com/libfuse/libfuse/pull/268
+ https://sourceforge.net/p/fuse/mailman/message/36374753/
+Description:
+ In fuse before versions 2.9.8 and 3.x before 3.2.5, fusermount is
+ vulnerable to a restriction bypass when SELinux is active. This allows
+ non-root users to mount a FUSE file system with the 'allow_other' mount
+ option regardless of whether 'user_allow_other' is set in the fuse
+ configuration. An attacker may use this flaw to mount a FUSE file system,
+ accessible by other users, and trick them into accessing files on that file
+ system, possibly causing Denial of Service or other unspecified effects.
+Ubuntu-Description:
+Notes:
+Bugs:
+ http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=904216
+ http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=904439
+Priority: low
+Discovered-by:
+Assigned-to:
+CVSS:
+ nvd: CVSS:3.0/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H
+
+
+Patches_fuse3:
+upstream_fuse3: needs-triage
+precise/esm_fuse3: DNE
+trusty_fuse3: DNE
+trusty/esm_fuse3: DNE
+xenial_fuse3: DNE
+bionic_fuse3: DNE
+cosmic_fuse3: DNE
+disco_fuse3: ignored (reached end-of-life)
+eoan_fuse3: ignored (reached end-of-life)
+focal_fuse3: needs-triage
+groovy_fuse3: needs-triage
+devel_fuse3: needs-triage
+
+Patches_fuse:
+upstream_fuse: needs-triage
+precise/esm_fuse: needs-triage
+trusty_fuse: ignored (reached end-of-life)
+trusty/esm_fuse: needs-triage
+xenial_fuse: needs-triage
+bionic_fuse: needs-triage
+cosmic_fuse: ignored (reached end-of-life)
+disco_fuse: ignored (reached end-of-life)
+eoan_fuse: ignored (reached end-of-life)
+focal_fuse: needs-triage
+groovy_fuse: needs-triage
+devel_fuse: needs-triage`
 )
 
 func Deb(t *testing.T) {
@@ -25,7 +79,7 @@ func Deb(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	resp := new(response)
+	resp := new(Response)
 	err = json.Unmarshal(raw, &resp)
 	if err != nil {
 		t.Error(err)
@@ -41,7 +95,7 @@ func DebRequest(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	resp := response{}
+	resp := Response{}
 	err = json.Unmarshal(raw, &resp)
 	if err != nil {
 		t.Error(err)
@@ -80,13 +134,27 @@ func RedisStore(t *testing.T) {
 	//}
 }
 
-func TestUbuntuListTokens(t *testing.T) {
-	u := NewUbuntu()
-	raw := make([]byte, 0)
-	_, err := u.Read(&raw)
+func TestUbuntuCollect(t *testing.T) {
+	rlog.Debug("Go test")
+	u, err := NewUbuntu()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	resp := u.CollectAll()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Println(resp)
+}
+
+func UbuntuParseRaw(t *testing.T) {
+	u := ubuntu{}
+	r, err := u.parseText(ubuntuCveText)
 	if err != nil {
 		t.Error(err)
 	}
-	nds, _ := u.listNodes(raw)
-	fmt.Println(nds)
+	_ = r
+	//fmt.Println(r)
 }

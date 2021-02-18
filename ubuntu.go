@@ -3,34 +3,70 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 
+	"github.com/romana/rlog"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
 
 type ubuntu struct {
-	url   string
-	paths []string
+	source string
+	url    *url.URL
+	dirs   []string
 }
 
-func NewUbuntu() *ubuntu {
-	return &ubuntu{
-		sources["ubuntu"],
-		[]string{"/tree/active", "/tree/retired"},
+func NewUbuntu() (*ubuntu, error) {
+	url, err := url.Parse(sources["ubuntu"])
+	if err != nil {
+		return nil, err
 	}
+	return &ubuntu{
+		"",
+		url,
+		[]string{"/tree/active", "/tree/retired"},
+	}, nil
 }
 
-func (p *ubuntu) SetURL(url string) {
-	p.url = url
+func (p *ubuntu) CollectAll() Response { //todo: put out of ubuntu object
+	resp := Response{}
+	for _, dir := range p.dirs {
+		rawdata, err := p.readUrl(p.url.String() + dir)
+		if err != nil {
+			rlog.Error(err)
+			continue
+		}
+		links, err := p.listLinks(rawdata)
+		if err != nil {
+			rlog.Error(err)
+			continue
+		}
+		for _, link := range links {
+			rlog.Debug(link)
+			rawdata, err = p.readUrl(p.url.Scheme + "://" + p.url.Host + link)
+			if err != nil {
+				rlog.Error(err)
+				continue
+			}
+			resp1, err := p.parseRaw(rawdata)
+			if err != nil {
+				rlog.Error(err)
+				continue
+			}
+			for k, v := range resp1 {
+				resp[k] = v
+			}
+		}
+	}
+	return resp
 }
 
 func (p *ubuntu) Read(data *[]byte) (int, error) {
 	c := http.Client{}
-	req, err := http.NewRequest("GET", p.url, nil)
+	req, err := http.NewRequest("GET", p.source, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -56,7 +92,7 @@ func (p *ubuntu) Parse(raw []byte) (Response, error) {
 	return j, nil
 }
 
-func (p *ubuntu) listNodes(raw []byte) ([]string, error) {
+func (p *ubuntu) listLinks(raw []byte) ([]string, error) {
 	rdr := bytes.NewReader(raw)
 	doc := html.NewTokenizer(rdr)
 	rslt := make([]string, 0)
@@ -68,12 +104,11 @@ func (p *ubuntu) listNodes(raw []byte) ([]string, error) {
 			}
 			for _, attr := range tkn.Attr {
 				if attr.Key == "href" {
-					href := attr.Val
 					tknType = doc.Next()
 					if tknType == html.TextToken {
 						tkn = doc.Token()
 						if strings.HasPrefix(tkn.Data, "CVE-") {
-							fmt.Println(href, " - ", tkn.Data)
+							rslt = append(rslt, attr.Val)
 						}
 					}
 				}
@@ -101,25 +136,26 @@ func (u *ubuntu) readUrl(url string) ([]byte, error) {
 	return data, nil
 }
 
-//func (u *ubuntu) ParseRaw(raw []byte) (pkgs []string, cve CveData, err error) {
-//	rdr := bytes.NewReader(raw)
-//	doc := html.NewTokenizer(rdr)
-//	for tknType := doc.Next(); tknType != html.ErrorToken; tknType = doc.Next() {
-//		tkn := doc.Token()
-//		if tknType == html.StartTagToken {
-//			if tkn.DataAtom != atom.Code {
-//				continue
-//			}
-//			data := tkn.Data
-//			cveid, cve, err := u.getCve(data)
-//			if err != nil {
-//				return "", CveData{}, err
-//			}
-//			return cveid, cve, nil
-//		}
-//	}
-//	return "", CveData{}, nil
-//}
+func (u *ubuntu) parseRaw(raw []byte) (Response, error) {
+	rdr := bytes.NewReader(raw)
+	doc := html.NewTokenizer(rdr)
+	var resp Response
+	var err error
+	for tknType := doc.Next(); tknType != html.ErrorToken; tknType = doc.Next() {
+		tkn := doc.Token()
+		if tknType == html.TextToken {
+			data := tkn.Data
+			resp, err = u.parseText(string(data))
+			if err != nil {
+				return nil, err
+			}
+			if len(resp) > 0 {
+				return resp, nil
+			}
+		}
+	}
+	return resp, nil
+}
 
 func (u *ubuntu) parseText(data string) (Response, error) {
 	lines := strings.Split(data, "\n")
@@ -129,16 +165,24 @@ func (u *ubuntu) parseText(data string) (Response, error) {
 	cveid := ""
 	fixedVersion := ""
 	cve := make(map[string]CveData)
+	//c := CveData1{
+	//	Description: "de",
+	//}
+	//fmt.Println(c)
 	releases := map[string]Release{}
 	for i := 0; i < len(lines); i++ { //got cveid
 		if strings.HasPrefix(lines[i], "Candidate:") { //maybe should add ' && cveid=="" '
-			cveid = strings.TrimPrefix(lines[i], "Candidate")
+			cveid = strings.TrimPrefix(lines[i], "Candidate:")
 			cveid = strings.TrimSpace(cveid)
-			cve[cveid] = CveData{}
+			cve[cveid] = CveData{
+				"",
+				make(map[string]Release),
+				"",
+			}
 			continue
 		}
 		if strings.HasPrefix(lines[i], "Description:") { //got Description
-			for i++; strings.HasPrefix(lines[i], " "); i++ { // so long as line begins with " "
+			for i++; i < len(lines) && strings.HasPrefix(lines[i], " "); i++ { // so long as line begins with " "
 				descr = descr + strings.TrimSpace(lines[i]) + " "
 			}
 			descr = strings.TrimSpace(descr)
@@ -149,11 +193,12 @@ func (u *ubuntu) parseText(data string) (Response, error) {
 			urgency = strings.TrimSpace(urgency)
 			continue
 		}
+		pkg := ""
 		if strings.HasPrefix(lines[i], "Patches_") { //got package name
-			pkg := strings.TrimPrefix(lines[i], "Patches_")
+			pkg = strings.TrimPrefix(lines[i], "Patches_")
 			pkg = strings.TrimSpace(strings.TrimSuffix(pkg, ":"))
-			pkgs[pkg] = cve                                 //assign to package empty Response
-			for i++; strings.Contains(lines[i], pkg); i++ { //search and fill releases for each package
+			pkgs[pkg] = cve                                                   //assign to package empty Response
+			for i++; i < len(lines) && strings.Contains(lines[i], pkg); i++ { //search and fill releases for each package
 				//get release name
 				//ex: hardy_libxml2: not-affected (2.6.31.dfsg-2ubuntu1)
 				// releaseName = hardy
@@ -178,8 +223,15 @@ func (u *ubuntu) parseText(data string) (Response, error) {
 					urgency,
 				}
 			}
-			continue
+			if pkg == "" || cveid == "" {
+				continue
+			}
+			pkgs[pkg][cveid] = CveData{
+				descr,
+				releases,
+				"local",
+			}
 		}
 	}
-	return nil, nil
+	return pkgs, nil
 }
