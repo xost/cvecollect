@@ -44,6 +44,8 @@ func (p *ubuntu) CollectAll() Response { //todo: put out of ubuntu object
 			rlog.Error(err)
 			continue
 		}
+		// chan for rawdata
+		data := make(chan int, 10)
 		for _, link := range links {
 			rlog.Debug(link)
 			rawdata, err = p.readUrl(p.url.Scheme + "://" + p.url.Host + link)
