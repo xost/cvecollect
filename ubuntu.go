@@ -34,33 +34,34 @@ func NewUbuntu() (*ubuntu, error) {
 func (p *ubuntu) CollectAll() Response { //todo: put out of ubuntu object
 	resp := Response{}
 	for _, dir := range p.dirs {
-		rawdata, err := p.readUrl(p.url.String() + dir)
+		dirCh := make(chan []byte)
+		go p.readUrl(p.url.String()+dir, dirCh)
+		links, err := p.listLinks(<-dirCh)
 		if err != nil {
 			rlog.Error(err)
 			continue
 		}
-		links, err := p.listLinks(rawdata)
-		if err != nil {
-			rlog.Error(err)
-			continue
-		}
+		rlog.Debug(len(links))
 		// chan for rawdata
-		data := make(chan int, 10)
+		linkCh := make(chan string, 5)
+		dataCh := make(chan []byte, 5)
+		respCh := make(chan Response, 5)
+		go func() {
+			for d := range dataCh {
+				p.parseRaw(d, respCh)
+			}
+			rlog.Debug("FINISHED")
+		}()
+		go func() {
+			for r := range respCh {
+				for k, v := range r {
+					rlog.Debug(v)
+					resp[k] = v
+				}
+			}
+		}()
 		for _, link := range links {
-			rlog.Debug(link)
-			rawdata, err = p.readUrl(p.url.Scheme + "://" + p.url.Host + link)
-			if err != nil {
-				rlog.Error(err)
-				continue
-			}
-			resp1, err := p.parseRaw(rawdata)
-			if err != nil {
-				rlog.Error(err)
-				continue
-			}
-			for k, v := range resp1 {
-				resp[k] = v
-			}
+			go p.readUrl(p.url.Scheme+"://"+p.url.Host+link, dataCh)
 		}
 	}
 	return resp
@@ -120,25 +121,25 @@ func (p *ubuntu) listLinks(raw []byte) ([]string, error) {
 	return rslt, nil
 }
 
-func (u *ubuntu) readUrl(url string) ([]byte, error) {
+func (u *ubuntu) readUrl(url string, dataCh chan<- []byte) {
 	c := http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, err
+		return
 	}
 	resp, err := c.Do(req)
 	if err != nil {
-		return nil, err
+		return
 	}
 	defer resp.Body.Close()
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return
 	}
-	return data, nil
+	dataCh <- data
 }
 
-func (u *ubuntu) parseRaw(raw []byte) (Response, error) {
+func (u *ubuntu) parseRaw(raw []byte, respCh chan<- Response) {
 	rdr := bytes.NewReader(raw)
 	doc := html.NewTokenizer(rdr)
 	var resp Response
@@ -149,14 +150,16 @@ func (u *ubuntu) parseRaw(raw []byte) (Response, error) {
 			data := tkn.Data
 			resp, err = u.parseText(string(data))
 			if err != nil {
-				return nil, err
+				rlog.Error(err)
+				continue
 			}
-			if len(resp) > 0 {
-				return resp, nil
+			if len(resp) == 0 {
+				rlog.Warn("Content is empty.")
+			} else {
+				respCh <- resp
 			}
 		}
 	}
-	return resp, nil
 }
 
 func (u *ubuntu) parseText(data string) (Response, error) {
