@@ -42,7 +42,6 @@ func (p *ubuntu) CollectAll() Response { //todo: put out of ubuntu object
 			continue
 		}
 		rlog.Debug(len(links))
-		linkCh := make(chan string, 5)
 		dataCh := make(chan []byte, 5)
 		respCh := make(chan Response, 5)
 		go func() {
@@ -60,8 +59,7 @@ func (p *ubuntu) CollectAll() Response { //todo: put out of ubuntu object
 			}
 		}()
 		for _, link := range links {
-			linkCh <- p.url.Scheme + "://" + p.url.Host + link
-			go p.readUrl(linkCh, dataCh)
+			go p.readUrl(p.url.Scheme+"://"+p.url.Host+link, dataCh)
 		}
 	}
 	return resp
@@ -136,6 +134,7 @@ func (u *ubuntu) readUrl(url string, dataCh chan<- []byte) {
 	if err != nil {
 		return
 	}
+	rlog.Debug(url)
 	dataCh <- data
 }
 
