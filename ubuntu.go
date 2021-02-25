@@ -35,14 +35,13 @@ func (p *ubuntu) CollectAll() Response { //todo: put out of ubuntu object
 	resp := Response{}
 	for _, dir := range p.dirs {
 		dirCh := make(chan []byte)
-		go p.readUrl(p.url.String()+dir, dirCh)
+		p.readUrl(p.url.String()+dir, dirCh) //soso
 		links, err := p.listLinks(<-dirCh)
 		if err != nil {
 			rlog.Error(err)
 			continue
 		}
 		rlog.Debug(len(links))
-		// chan for rawdata
 		linkCh := make(chan string, 5)
 		dataCh := make(chan []byte, 5)
 		respCh := make(chan Response, 5)
@@ -61,7 +60,8 @@ func (p *ubuntu) CollectAll() Response { //todo: put out of ubuntu object
 			}
 		}()
 		for _, link := range links {
-			go p.readUrl(p.url.Scheme+"://"+p.url.Host+link, dataCh)
+			linkCh <- p.url.Scheme + "://" + p.url.Host + link
+			go p.readUrl(linkCh, dataCh)
 		}
 	}
 	return resp
