@@ -22,3 +22,7 @@ type Release struct {
 //map["package name"]["cveid"]CveData
 type Response map[string]map[string]CveData
 type Repository map[string]string
+
+type Collector interface {
+	Collect() (*Response, error)
+}

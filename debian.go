@@ -7,16 +7,18 @@ import (
 )
 
 type debian struct {
-	url string
+	url   string
+	descr string
 }
 
 func NewDebian() *debian {
 	return &debian{
 		sources["debian"],
+		"Debian CVE data.",
 	}
 }
 
-func (d *debian) SetURL(url string) {
+func (d *debian) setURL(url string) {
 	d.url = url
 }
 
@@ -39,11 +41,22 @@ func (d *debian) Read(data *[]byte) (int, error) {
 	return len(*data), nil
 }
 
-func (d *debian) Parse(raw []byte) (Response, error) {
+func (d *debian) parse(raw []byte) (*Response, error) {
 	j := Response{}
 	err := json.Unmarshal(raw, &j)
 	if err != nil {
 		return nil, err
 	}
-	return j, nil
+	return &j, nil
+}
+
+func (p *debian) Collect() (resp *Response, err error) {
+	resp = &Response{}
+	data := make([]byte, 0)
+	_, err = p.Read(&data) //do not handle err be cause anyway i return reps empty or not and err nil or not
+	if err != nil {
+		return
+	}
+	resp, err = p.parse(data)
+	return
 }

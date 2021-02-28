@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/nitishm/go-rejson"
@@ -89,7 +90,7 @@ func Deb(t *testing.T) {
 
 func DebRequest(t *testing.T) {
 	d := debian{}
-	d.SetURL(sources["debian"])
+	d.setURL(sources["debian"])
 	raw := make([]byte, 0)
 	_, err := d.Read(&raw)
 	if err != nil {
@@ -110,7 +111,7 @@ func RedisStore(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	resp, err := d.Parse(raw)
+	resp, err := d.parse(raw)
 	if err != nil {
 		t.Error(err)
 	}
@@ -134,14 +135,10 @@ func RedisStore(t *testing.T) {
 	//}
 }
 
-func TestUbuntuCollect(t *testing.T) {
-	rlog.Debug("Go test")
-	u, err := NewUbuntu()
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	resp := u.CollectAll()
+func TestUbuntuCollectAll(t *testing.T) {
+	rlog.Debug("Go test ubuntu CollectAll")
+	u := NewUbuntu()
+	resp, err := u.Collect()
 	if err != nil {
 		t.Error(err)
 		return
@@ -157,4 +154,8 @@ func UbuntuParseRaw(t *testing.T) {
 	}
 	_ = r
 	//fmt.Println(r)
+}
+
+func TestHandleUpdate(t *testing.T) {
+	req:=
 }

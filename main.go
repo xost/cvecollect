@@ -89,27 +89,27 @@ func handleHelp(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleUpdate(w http.ResponseWriter, r *http.Request) {
-	//only debian at now
-	deb := NewDebian()
-	data := make([]byte, 0)
-	_, err := deb.Read(&data)
-	if err != nil {
-		rlog.Error(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	collectors := []Collector{
+		NewDebian(),
+		NewUbuntu(),
 	}
-	debCve, err := deb.Parse(data)
-	if err != nil {
-		rlog.Error(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	res, err := rh.JSONSet("debian", ".", debCve)
-	if err != nil || res.(string) != "OK" {
-		rlog.Error(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Failed to update CVE data"))
-		return
+	for _, c := range collectors {
+		cve, err := c.Collect()
+		if err != nil {
+			rlog.Error(err)
+			if len(*cve) == 0 {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte("Result is empty\n" + err.Error()))
+				return
+			}
+		}
+		res, err := rh.JSONSet("debian", ".", *cve)
+		if err != nil || res.(string) != "OK" {
+			rlog.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Failed to update CVE data"))
+			return
+		}
 	}
 	rlog.Info("CVE data was updated")
 	w.WriteHeader(http.StatusOK)

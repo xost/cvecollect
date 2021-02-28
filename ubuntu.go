@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/romana/rlog"
 	"golang.org/x/net/html"
@@ -19,69 +20,89 @@ type ubuntu struct {
 	dirs   []string
 }
 
-func NewUbuntu() (*ubuntu, error) {
+func NewUbuntu() *ubuntu {
 	url, err := url.Parse(sources["ubuntu"])
 	if err != nil {
-		return nil, err
+		rlog.Error(err)
+		return nil
 	}
 	return &ubuntu{
 		"",
 		url,
 		[]string{"/tree/active", "/tree/retired"},
-	}, nil
+	}
 }
 
-func (p *ubuntu) CollectAll() Response { //todo: put out of ubuntu object
-	resp := Response{}
+func (p *ubuntu) Collect() (resp *Response, err error) { //todo: put out of ubuntu object
 	for _, dir := range p.dirs {
-		dirCh := make(chan []byte)
-		p.readUrl(p.url.String()+dir, dirCh) //soso
+		dirCh := make(chan []byte, 1)
+		p.readUrl(p.url.String()+dir, dirCh)
 		links, err := p.listLinks(<-dirCh)
 		if err != nil {
 			rlog.Error(err)
 			continue
 		}
-		rlog.Debug(len(links))
-		dataCh := make(chan []byte, 5)
-		respCh := make(chan Response, 5)
+		linkCh := make(chan string, 500)
+		dataCh := make(chan []byte, 500)
+		respCh := make(chan Response, 500)
+		var wgLink, wgRaw, wgResp sync.WaitGroup
 		go func() {
 			for d := range dataCh {
+				wgRaw.Add(1)
 				p.parseRaw(d, respCh)
+				wgRaw.Done()
 			}
-			rlog.Debug("FINISHED")
 		}()
 		go func() {
 			for r := range respCh {
+				wgResp.Add(1)
 				for k, v := range r {
-					rlog.Debug(v)
-					resp[k] = v
+					(*resp)[k] = v
 				}
+				wgResp.Done()
 			}
 		}()
-		for _, link := range links {
-			go p.readUrl(p.url.Scheme+"://"+p.url.Host+link, dataCh)
+		for i := 0; i < 500; i++ {
+			go func() {
+				for link := range linkCh {
+					p.readUrl(link, dataCh)
+					wgLink.Done()
+				}
+			}()
 		}
+		rlog.Debug("LAST LINK:", links[len(links)-1])
+		for _, link := range links {
+			wgLink.Add(1)
+			linkCh <- p.url.Scheme + "://" + p.url.Host + link
+		}
+		wgLink.Wait()
+		close(linkCh)
+		wgRaw.Wait()
+		close(dataCh)
+		wgResp.Wait()
+		close(respCh)
 	}
-	return resp
+	return
 }
 
-func (p *ubuntu) Read(data *[]byte) (int, error) {
+func (p *ubuntu) Read(data *[]byte) (n int, err error) {
 	c := http.Client{}
 	req, err := http.NewRequest("GET", p.source, nil)
 	if err != nil {
-		return 0, err
+		return
 	}
 	resp, err := c.Do(req)
 	if err != nil {
-		return 0, err
+		return
 	}
 	defer resp.Body.Close()
 	data1, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return 0, err
+		return
 	}
 	*data = data1[:]
-	return len(*data), nil
+	n = len(*data)
+	return
 }
 
 func (p *ubuntu) Parse(raw []byte) (Response, error) {
@@ -134,7 +155,6 @@ func (u *ubuntu) readUrl(url string, dataCh chan<- []byte) {
 	if err != nil {
 		return
 	}
-	rlog.Debug(url)
 	dataCh <- data
 }
 
@@ -154,9 +174,8 @@ func (u *ubuntu) parseRaw(raw []byte, respCh chan<- Response) {
 			}
 			if len(resp) == 0 {
 				rlog.Warn("Content is empty.")
-			} else {
-				respCh <- resp
 			}
+			respCh <- resp
 		}
 	}
 }
