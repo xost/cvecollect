@@ -11,6 +11,7 @@ COPY go.mod \
   main.go \
   types.go \
   debian.go \
+  ubuntu.go \
   /app/
 
 RUN go mod download

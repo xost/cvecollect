@@ -16,6 +16,8 @@ import (
 
 type ubuntu struct {
 	source string
+	name   string
+	descr  string
 	url    *url.URL
 	dirs   []string
 }
@@ -28,9 +30,19 @@ func NewUbuntu() *ubuntu {
 	}
 	return &ubuntu{
 		"",
+		"ubuntu",
+		"Ubuntu CVE data.",
 		url,
 		[]string{"/tree/active", "/tree/retired"},
 	}
+}
+
+func (p *ubuntu) Name() string {
+	return p.name
+}
+
+func (p *ubuntu) Descr() string {
+	return p.descr
 }
 
 func (p *ubuntu) Collect() (resp *Response, err error) { //todo: put out of ubuntu object

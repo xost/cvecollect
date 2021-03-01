@@ -103,8 +103,9 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		res, err := rh.JSONSet("debian", ".", *cve)
+		res, err := rh.JSONSet(c.Name(), ".", *cve)
 		if err != nil || res.(string) != "OK" {
+			rlog.Error("Failed to update CVE data")
 			rlog.Error(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Failed to update CVE data"))

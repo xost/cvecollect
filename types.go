@@ -25,4 +25,6 @@ type Repository map[string]string
 
 type Collector interface {
 	Collect() (*Response, error)
+	Name() string
+	Descr() string
 }

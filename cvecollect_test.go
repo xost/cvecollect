@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/nitishm/go-rejson"
@@ -156,6 +156,7 @@ func UbuntuParseRaw(t *testing.T) {
 	//fmt.Println(r)
 }
 
-func TestHandleUpdate(t *testing.T) {
-	req:=
-}
+//func TestHandleUpdate(t *testing.T) {
+//	http.HandleFunc("/update", handleUpdate)
+//	http.ListenAndServe(":3000", nil)
+//}

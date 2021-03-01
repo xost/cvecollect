@@ -8,18 +8,28 @@ import (
 
 type debian struct {
 	url   string
+	name  string
 	descr string
 }
 
 func NewDebian() *debian {
 	return &debian{
 		sources["debian"],
+		"debian",
 		"Debian CVE data.",
 	}
 }
 
 func (d *debian) setURL(url string) {
 	d.url = url
+}
+
+func (p *debian) Descr() string {
+	return p.descr
+}
+
+func (p *debian) Name() string {
+	return p.name
 }
 
 func (d *debian) Read(data *[]byte) (int, error) {
