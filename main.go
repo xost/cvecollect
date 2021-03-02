@@ -94,6 +94,7 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 		NewUbuntu(),
 	}
 	for _, c := range collectors {
+		rlog.Info("Collecting CVE data for:", "\""+c.Name()+"\"")
 		cve, err := c.Collect()
 		if err != nil {
 			rlog.Error(err)
@@ -111,6 +112,7 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("Failed to update CVE data"))
 			return
 		}
+		rlog.Info("CVE data for", "\""+c.Name()+"\"", "was updated")
 	}
 	rlog.Info("CVE data was updated")
 	w.WriteHeader(http.StatusOK)

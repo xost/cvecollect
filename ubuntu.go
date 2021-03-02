@@ -46,6 +46,7 @@ func (p *ubuntu) Descr() string {
 }
 
 func (p *ubuntu) Collect() (resp *Response, err error) { //todo: put out of ubuntu object
+	resp = &Response{}
 	for _, dir := range p.dirs {
 		dirCh := make(chan []byte, 1)
 		p.readUrl(p.url.String()+dir, dirCh)
@@ -82,7 +83,6 @@ func (p *ubuntu) Collect() (resp *Response, err error) { //todo: put out of ubun
 				}
 			}()
 		}
-		rlog.Debug("LAST LINK:", links[len(links)-1])
 		for _, link := range links {
 			wgLink.Add(1)
 			linkCh <- p.url.Scheme + "://" + p.url.Host + link
@@ -185,7 +185,7 @@ func (u *ubuntu) parseRaw(raw []byte, respCh chan<- Response) {
 				continue
 			}
 			if len(resp) == 0 {
-				rlog.Warn("Content is empty.")
+				//rlog.Warn("Content is empty.")
 			}
 			respCh <- resp
 		}
@@ -200,10 +200,6 @@ func (u *ubuntu) parseText(data string) (Response, error) {
 	cveid := ""
 	fixedVersion := ""
 	cve := make(map[string]CveData)
-	//c := CveData1{
-	//	Description: "de",
-	//}
-	//fmt.Println(c)
 	releases := map[string]Release{}
 	for i := 0; i < len(lines); i++ { //got cveid
 		if strings.HasPrefix(lines[i], "Candidate:") { //maybe should add ' && cveid=="" '
@@ -231,7 +227,8 @@ func (u *ubuntu) parseText(data string) (Response, error) {
 		pkg := ""
 		if strings.HasPrefix(lines[i], "Patches_") { //got package name
 			pkg = strings.TrimPrefix(lines[i], "Patches_")
-			pkg = strings.TrimSpace(strings.TrimSuffix(pkg, ":"))
+			pkg = strings.TrimSpace(pkg)
+			pkg = strings.TrimSuffix(pkg, ":")
 			pkgs[pkg] = cve                                                   //assign to package empty Response
 			for i++; i < len(lines) && strings.Contains(lines[i], pkg); i++ { //search and fill releases for each package
 				//get release name

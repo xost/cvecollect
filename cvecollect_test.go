@@ -135,7 +135,7 @@ func RedisStore(t *testing.T) {
 	//}
 }
 
-func TestUbuntuCollectAll(t *testing.T) {
+func UbuntuCollectAll(t *testing.T) {
 	rlog.Debug("Go test ubuntu CollectAll")
 	u := NewUbuntu()
 	resp, err := u.Collect()
@@ -156,7 +156,15 @@ func UbuntuParseRaw(t *testing.T) {
 	//fmt.Println(r)
 }
 
-//func TestHandleUpdate(t *testing.T) {
-//	http.HandleFunc("/update", handleUpdate)
-//	http.ListenAndServe(":3000", nil)
-//}
+func TestHandleUpdate(t *testing.T) {
+	c := http.Client{}
+	req, err := http.NewRequest("GET", "http://127.0.0.1:3000/update", nil)
+	if err != nil {
+		t.Error(err)
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		t.Error(err)
+	}
+	defer resp.Body.Close()
+}
