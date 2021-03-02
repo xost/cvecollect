@@ -227,8 +227,7 @@ func (u *ubuntu) parseText(data string) (Response, error) {
 		pkg := ""
 		if strings.HasPrefix(lines[i], "Patches_") { //got package name
 			pkg = strings.TrimPrefix(lines[i], "Patches_")
-			pkg = strings.TrimSpace(pkg)
-			pkg = strings.TrimSuffix(pkg, ":")
+			pkg = strings.Trim(pkg, ": ")
 			pkgs[pkg] = cve                                                   //assign to package empty Response
 			for i++; i < len(lines) && strings.Contains(lines[i], pkg); i++ { //search and fill releases for each package
 				//get release name
