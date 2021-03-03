@@ -17,6 +17,7 @@ var (
 	sources = map[string]string{
 		"debian": "https://security-tracker.debian.org/tracker/data/json",
 		"ubuntu": "https://git.launchpad.net/ubuntu-cve-tracker",
+		"redhat": "https://access.redhat.com/labs/securitydataapi/cve",
 	}
 	addr = ""
 	port = ""

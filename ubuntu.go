@@ -15,11 +15,11 @@ import (
 )
 
 type ubuntu struct {
-	source string
-	name   string
-	descr  string
-	url    *url.URL
-	dirs   []string
+	//	source string
+	name  string
+	descr string
+	url   *url.URL
+	dirs  []string
 }
 
 func NewUbuntu() *ubuntu {
@@ -29,7 +29,7 @@ func NewUbuntu() *ubuntu {
 		return nil
 	}
 	return &ubuntu{
-		"",
+		//		"",
 		"ubuntu",
 		"Ubuntu CVE data.",
 		url,
@@ -97,25 +97,25 @@ func (p *ubuntu) Collect() (resp *Response, err error) { //todo: put out of ubun
 	return
 }
 
-func (p *ubuntu) Read(data *[]byte) (n int, err error) {
-	c := http.Client{}
-	req, err := http.NewRequest("GET", p.source, nil)
-	if err != nil {
-		return
-	}
-	resp, err := c.Do(req)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-	data1, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return
-	}
-	*data = data1[:]
-	n = len(*data)
-	return
-}
+//func (p *ubuntu) Read(data *[]byte) (n int, err error) {
+//	c := http.Client{}
+//	req, err := http.NewRequest("GET", p.source, nil)
+//	if err != nil {
+//		return
+//	}
+//	resp, err := c.Do(req)
+//	if err != nil {
+//		return
+//	}
+//	defer resp.Body.Close()
+//	data1, err := ioutil.ReadAll(resp.Body)
+//	if err != nil {
+//		return
+//	}
+//	*data = data1[:]
+//	n = len(*data)
+//	return
+//}
 
 func (p *ubuntu) Parse(raw []byte) (Response, error) {
 	j := Response{}

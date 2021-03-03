@@ -156,7 +156,7 @@ func UbuntuParseRaw(t *testing.T) {
 	//fmt.Println(r)
 }
 
-func TestHandleUpdate(t *testing.T) {
+func HandleUpdate(t *testing.T) {
 	c := http.Client{}
 	req, err := http.NewRequest("GET", "http://127.0.0.1:3000/update", nil)
 	if err != nil {
@@ -167,4 +167,14 @@ func TestHandleUpdate(t *testing.T) {
 		t.Error(err)
 	}
 	defer resp.Body.Close()
+}
+
+func TestRedhatQeury(t *testing.T) {
+	rh := NewRedhat()
+	pkg := ""
+	r, err := rh.Get("2020-14372", pkg, nil)
+	if err != nil {
+		t.Error(err)
+	}
+	rlog.Debug(r)
 }
