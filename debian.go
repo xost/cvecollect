@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/nitishm/go-rejson"
 )
 
 type debian struct {
@@ -60,13 +62,12 @@ func (d *debian) parse(raw []byte) (*Response, error) {
 	return &j, nil
 }
 
-func (p *debian) Collect() (resp *Response, err error) {
-	resp = &Response{}
+func (p *debian) Collect(rdb *rejson.Handler) (interface{}, error) {
 	data := make([]byte, 0)
-	_, err = p.Read(&data) //do not handle err be cause anyway i return reps empty or not and err nil or not
+	_, err := p.Read(&data) //do not handle err be cause anyway i return reps empty or not and err nil or not
 	if err != nil {
-		return
+		return nil, err
 	}
-	resp, err = p.parse(data)
-	return
+	resp, err := p.parse(data)
+	return *resp, err
 }

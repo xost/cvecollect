@@ -1,5 +1,7 @@
 package main
 
+import "github.com/nitishm/go-rejson"
+
 //type CveData1 struct {
 //	Description string             `json:"description"`
 //	Releases    map[string]Release `json:"releases"`
@@ -24,7 +26,7 @@ type Response map[string]map[string]CveData
 type Repository map[string]string
 
 type Collector interface {
-	Collect() (*Response, error)
+	Collect(*rejson.Handler) (interface{}, error)
 	Name() string
 	Descr() string
 }

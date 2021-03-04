@@ -138,7 +138,7 @@ func RedisStore(t *testing.T) {
 func UbuntuCollectAll(t *testing.T) {
 	rlog.Debug("Go test ubuntu CollectAll")
 	u := NewUbuntu()
-	resp, err := u.Collect()
+	resp, err := u.Collect(rh)
 	if err != nil {
 		t.Error(err)
 		return
@@ -171,10 +171,28 @@ func HandleUpdate(t *testing.T) {
 
 func TestRedhatQeury(t *testing.T) {
 	rh := NewRedhat()
+	data := rhCve{}
 	pkg := ""
-	r, err := rh.Get("2020-14372", pkg, nil)
+	r, err := rh.Query("2021-27212", pkg, nil)
 	if err != nil {
 		t.Error(err)
 	}
-	rlog.Debug(r)
+	//fmt.Printf("%p\n", &data.Packages)
+	//rlog.Println(string(r))
+	err = json.Unmarshal(r, &data)
+	for _, p := range data.Packages {
+		rlog.Println(p.Name)
+	}
+	rlog.Println("***")
+	pkg = "redhat-coreos_"
+	r, err = rh.Query("2021-27212", pkg, nil)
+	if err != nil {
+		t.Error(err)
+	}
+	//fmt.Printf("%p\n", &data.Packages)
+	//rlog.Println(string(r))
+	err = json.Unmarshal(r, &data)
+	for _, p := range data.Packages {
+		rlog.Println(p.Name)
+	}
 }

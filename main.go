@@ -96,22 +96,16 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, c := range collectors {
 		rlog.Info("Collecting CVE data for:", "\""+c.Name()+"\"")
-		cve, err := c.Collect()
+		resp, err := c.Collect(rh)
 		if err != nil {
 			rlog.Error(err)
-			if len(*cve) == 0 {
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte("Result is empty\n" + err.Error()))
-				return
-			}
+			continue
 		}
-		res, err := rh.JSONSet(c.Name(), ".", *cve)
+		res, err := rh.JSONSet(c.Name(), ".", resp)
 		if err != nil || res.(string) != "OK" {
 			rlog.Error("Failed to update CVE data")
 			rlog.Error(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Failed to update CVE data"))
-			return
+			continue
 		}
 		rlog.Info("CVE data for", "\""+c.Name()+"\"", "was updated")
 	}

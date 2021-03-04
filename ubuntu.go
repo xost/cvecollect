@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/nitishm/go-rejson"
 	"github.com/romana/rlog"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -45,8 +46,8 @@ func (p *ubuntu) Descr() string {
 	return p.descr
 }
 
-func (p *ubuntu) Collect() (resp *Response, err error) { //todo: put out of ubuntu object
-	resp = &Response{}
+func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put out of ubuntu object
+	resp := &Response{}
 	for _, dir := range p.dirs {
 		dirCh := make(chan []byte, 1)
 		p.readUrl(p.url.String()+dir, dirCh)
@@ -94,28 +95,8 @@ func (p *ubuntu) Collect() (resp *Response, err error) { //todo: put out of ubun
 		wgResp.Wait()
 		close(respCh)
 	}
-	return
+	return *resp, nil
 }
-
-//func (p *ubuntu) Read(data *[]byte) (n int, err error) {
-//	c := http.Client{}
-//	req, err := http.NewRequest("GET", p.source, nil)
-//	if err != nil {
-//		return
-//	}
-//	resp, err := c.Do(req)
-//	if err != nil {
-//		return
-//	}
-//	defer resp.Body.Close()
-//	data1, err := ioutil.ReadAll(resp.Body)
-//	if err != nil {
-//		return
-//	}
-//	*data = data1[:]
-//	n = len(*data)
-//	return
-//}
 
 func (p *ubuntu) Parse(raw []byte) (Response, error) {
 	j := Response{}
