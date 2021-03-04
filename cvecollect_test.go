@@ -192,6 +192,9 @@ func TestRedhatQeury(t *testing.T) {
 	//fmt.Printf("%p\n", &data.Packages)
 	//rlog.Println(string(r))
 	err = json.Unmarshal(r, &data)
+	if err != nil {
+		t.Error(err)
+	}
 	for _, p := range data.Packages {
 		rlog.Println(p.Name)
 	}
