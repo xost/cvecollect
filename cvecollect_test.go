@@ -172,29 +172,15 @@ func HandleUpdate(t *testing.T) {
 func TestRedhatQeury(t *testing.T) {
 	rh := NewRedhat()
 	data := rhCve{}
-	pkg := ""
-	r, err := rh.Query("2021-27212", pkg, nil)
+	pkg := "fuse"
+	r, err := rh.Query("2018-10906", pkg, nil)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	//fmt.Printf("%p\n", &data.Packages)
 	//rlog.Println(string(r))
 	err = json.Unmarshal(r, &data)
-	for _, p := range data.Packages {
-		rlog.Println(p.Name)
-	}
-	rlog.Println("***")
-	pkg = "redhat-coreos_"
-	r, err = rh.Query("2021-27212", pkg, nil)
-	if err != nil {
-		t.Error(err)
-	}
-	//fmt.Printf("%p\n", &data.Packages)
-	//rlog.Println(string(r))
-	err = json.Unmarshal(r, &data)
-	if err != nil {
-		t.Error(err)
-	}
 	for _, p := range data.Packages {
 		rlog.Println(p.Name)
 	}

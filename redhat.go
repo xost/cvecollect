@@ -75,8 +75,8 @@ func (p *redhat) Collect() error {
 	return nil
 }
 
-func (p *redhat) Query(cveid, pkgName string, rdb *rejson.Handler) ([]byte, error) {
-	cveName := "CVE-" + cveid
+func (p *redhat) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, error) {
+	cveName := "CVE-" + cveId
 	c := http.Client{}
 	url := fmt.Sprintf("%s/%s.json", p.url, cveName)
 	req, err := http.NewRequest("GET", url, nil)

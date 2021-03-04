@@ -247,3 +247,6 @@ func (u *ubuntu) parseText(data string) (Response, error) {
 	}
 	return pkgs, nil
 }
+
+func (p *ubuntu) Query(cveid, pkg string, rdb *rejson.Handler) (string, error) {
+}
