@@ -153,7 +153,6 @@ func UbuntuParseRaw(t *testing.T) {
 		t.Error(err)
 	}
 	_ = r
-	//fmt.Println(r)
 }
 
 func HandleUpdate(t *testing.T) {
@@ -169,7 +168,36 @@ func HandleUpdate(t *testing.T) {
 	defer resp.Body.Close()
 }
 
-func TestRedhatQeury(t *testing.T) {
+func DebianCollect(t *testing.T) {
+	c := NewDebian()
+	data, err := c.Collect(rh)
+	if err != nil {
+		t.Error(err)
+	}
+	cveData := data.(Cve)
+	rlog.Debug(cveData["CVE-2018-10906"])
+}
+
+func TestDebianQuery(t *testing.T) {
+	c := NewDebian()
+	data, err := c.Collect(rh)
+	if err != nil {
+		t.Error(err)
+	}
+	res, err := rh.JSONSet(c.Name(), ".", data)
+	if err != nil || res.(string) != "OK" {
+		rlog.Error("Failed to update CVE data")
+		rlog.Error(err)
+	}
+	j, err := c.Query("2018-10906", "fuse3", rh)
+	if err != nil {
+		t.Error(err)
+	}
+	rlog.Debug(string(j))
+
+}
+
+func RedhatQeury(t *testing.T) {
 	rh := NewRedhat()
 	data := rhCve{}
 	pkg := "fuse"

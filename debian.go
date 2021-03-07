@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -53,13 +55,22 @@ func (d *debian) Read(data *[]byte) (int, error) {
 	return len(*data), nil
 }
 
-func (d *debian) parse(raw []byte) (*Response, error) {
+func (d *debian) parse(raw []byte) (*Cve, error) {
+	data := Cve{}
 	j := Response{}
 	err := json.Unmarshal(raw, &j)
 	if err != nil {
 		return nil, err
 	}
-	return &j, nil
+	for pkgName, cveMap := range j {
+		for cveId, cveData := range cveMap {
+			if _, ok := data[cveId]; !ok {
+				data[cveId] = Package{pkgName: cveData}
+			}
+			data[cveId][pkgName] = cveData
+		}
+	}
+	return &data, nil
 }
 
 func (p *debian) Collect(rdb *rejson.Handler) (interface{}, error) {
@@ -70,4 +81,21 @@ func (p *debian) Collect(rdb *rejson.Handler) (interface{}, error) {
 	}
 	resp, err := p.parse(data)
 	return *resp, err
+}
+
+func (p *debian) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, error) {
+	cveName := "CVE-" + cveId
+	path := fmt.Sprintf("[\"%s\"]", cveName)
+	if pkgName != "" {
+		path += fmt.Sprintf("[\"%s\"]", pkgName)
+	}
+	cveData, err := rdb.JSONGet(p.Name(), path)
+	if err != nil {
+		return nil, err
+	}
+	cveBytes, ok := cveData.([]byte)
+	if !ok {
+		return nil, errors.New("Can't case ....")
+	}
+	return cveBytes, nil
 }

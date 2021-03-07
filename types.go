@@ -25,8 +25,15 @@ type Release struct {
 type Response map[string]map[string]CveData
 type Repository map[string]string
 
+//map["package name"]CveData
+type Package map[string]CveData
+
+//map["CveId"]["PackageName"]CveData
+type Cve map[string]map[string]CveData
+
 type Collector interface {
 	Collect(*rejson.Handler) (interface{}, error)
+	Query(string, string, *rejson.Handler) ([]byte, error)
 	Name() string
 	Descr() string
 }
