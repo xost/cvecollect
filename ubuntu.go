@@ -80,16 +80,12 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 		}
 		linkCh := make(chan string, 8)
 		dataCh := make(chan []byte, 100)
-		respCh := make(chan *uCve, 100)
+		respCh := make(chan *uCve, 1000)
 		var wgLink, wgData, wgResp sync.WaitGroup
-		count := 0
 		go func() {
 			for d := range dataCh {
 				wgData.Add(1)
-				count++
 				p.parseRaw(d, respCh)
-				count--
-				rlog.Println(count, len(respCh))
 				wgData.Done()
 			}
 		}()
@@ -110,6 +106,7 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 				}
 			}()
 		}
+		links = links[:111]
 		rlog.Info("total links:", len(links))
 		for i, link := range links {
 			wgLink.Add(1)
