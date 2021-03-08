@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -16,12 +15,35 @@ import (
 )
 
 type ubuntu struct {
-	//	source string
 	name  string
 	descr string
 	url   *url.URL
 	dirs  []string
 }
+
+type uCveData struct {
+	Description       string    `json:"description,omitempty"`
+	PublicDate        string    `json:"public_date,omitempty"`
+	References        string    `json:"references,omitempty"`
+	UbuntuDescription string    `json:"ubuntu_description,omitempty"`
+	Notes             string    `json:"notes,omitempty"`
+	Mitigation        string    `json:"mitigation,omitempty"`
+	Bugs              string    `json:"bugs,omitempty"`
+	Priority          string    `json:"priority,omitempty"`
+	Discovered        string    `json:"descovered,omitempty"`
+	Assigned          string    `json:"assigned,omitempty"`
+	Cvss              string    `json:"cvss,omitempty"`
+	Packages          uPackages `json:"packages,omitempty"`
+}
+
+type uPackages map[string][]uRelease
+
+type uRelease struct {
+	Name   string `json:"release"`
+	Status string `json:"status,omitempty"`
+}
+
+type uCve map[string]uCveData
 
 func NewUbuntu() *ubuntu {
 	url, err := url.Parse(sources["ubuntu"])
@@ -47,7 +69,7 @@ func (p *ubuntu) Descr() string {
 }
 
 func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put out of ubuntu object
-	resp := &Response{}
+	resp := uCve{}
 	for _, dir := range p.dirs {
 		dirCh := make(chan []byte, 1)
 		p.readUrl(p.url.String()+dir, dirCh)
@@ -56,27 +78,31 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 			rlog.Error(err)
 			continue
 		}
-		linkCh := make(chan string, 500)
-		dataCh := make(chan []byte, 500)
-		respCh := make(chan Response, 500)
-		var wgLink, wgRaw, wgResp sync.WaitGroup
+		linkCh := make(chan string, 10)
+		dataCh := make(chan []byte, 10)
+		respCh := make(chan *uCve, 7)
+		var wgLink, wgData, wgResp sync.WaitGroup
+		count := 0
 		go func() {
 			for d := range dataCh {
-				wgRaw.Add(1)
+				wgData.Add(1)
+				count++
 				p.parseRaw(d, respCh)
-				wgRaw.Done()
+				count--
+				rlog.Println(count, len(respCh))
+				wgData.Done()
 			}
 		}()
 		go func() {
 			for r := range respCh {
 				wgResp.Add(1)
-				for k, v := range r {
-					(*resp)[k] = v
+				for k, v := range *r {
+					resp[k] = v
 				}
 				wgResp.Done()
 			}
 		}()
-		for i := 0; i < 500; i++ {
+		for i := 0; i < 8; i++ {
 			go func() {
 				for link := range linkCh {
 					p.readUrl(link, dataCh)
@@ -84,27 +110,22 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 				}
 			}()
 		}
-		for _, link := range links {
+		rlog.Info("total links:", len(links))
+		for i, link := range links {
 			wgLink.Add(1)
+			if i%100 == 0 {
+				rlog.Info(i, "link is parsed")
+			}
 			linkCh <- p.url.Scheme + "://" + p.url.Host + link
 		}
 		wgLink.Wait()
 		close(linkCh)
-		wgRaw.Wait()
+		wgData.Wait()
 		close(dataCh)
 		wgResp.Wait()
 		close(respCh)
 	}
-	return *resp, nil
-}
-
-func (p *ubuntu) Parse(raw []byte) (Response, error) {
-	j := Response{}
-	err := json.Unmarshal(raw, &j)
-	if err != nil {
-		return nil, err
-	}
-	return j, nil
+	return resp, nil
 }
 
 func (p *ubuntu) listLinks(raw []byte) ([]string, error) {
@@ -139,115 +160,120 @@ func (u *ubuntu) readUrl(url string, dataCh chan<- []byte) {
 	if err != nil {
 		return
 	}
+	req.Header.Set("User-Agent", "Golang_CVECollector_Bot/1.0")
 	resp, err := c.Do(req)
 	if err != nil {
+		rlog.Error(err)
 		return
 	}
 	defer resp.Body.Close()
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		rlog.Error(err)
 		return
+	}
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		rlog.Error(url, "http status code:", resp.StatusCode)
+		return
+	} else {
+		//rlog.Debug(resp.StatusCode)
 	}
 	dataCh <- data
 }
 
-func (u *ubuntu) parseRaw(raw []byte, respCh chan<- Response) {
+func (u *ubuntu) parseRaw(raw []byte, respCh chan<- *uCve) {
 	rdr := bytes.NewReader(raw)
 	doc := html.NewTokenizer(rdr)
-	var resp Response
-	var err error
 	for tknType := doc.Next(); tknType != html.ErrorToken; tknType = doc.Next() {
 		tkn := doc.Token()
 		if tknType == html.TextToken {
 			data := tkn.Data
-			resp, err = u.parseText(string(data))
-			if err != nil {
-				rlog.Error(err)
+			resp := u.parseText([]byte(data))
+			if resp == nil {
 				continue
-			}
-			if len(resp) == 0 {
-				//rlog.Warn("Content is empty.")
 			}
 			respCh <- resp
 		}
 	}
 }
 
-func (u *ubuntu) parseText(data string) (Response, error) {
-	lines := strings.Split(data, "\n")
-	pkgs := Response{}
-	descr := ""
-	urgency := ""
-	cveid := ""
-	fixedVersion := ""
-	cve := make(map[string]CveData)
-	releases := map[string]Release{}
-	for i := 0; i < len(lines); i++ { //got cveid
-		if strings.HasPrefix(lines[i], "Candidate:") { //maybe should add ' && cveid=="" '
-			cveid = strings.TrimPrefix(lines[i], "Candidate:")
-			cveid = strings.TrimSpace(cveid)
-			cve[cveid] = CveData{
-				"",
-				make(map[string]Release),
-				"",
-			}
+func (p *ubuntu) parseText(data []byte) *uCve {
+	lines := strings.Split(string(data), "\n")
+	var cve uCve // nil
+	cveData := uCveData{}
+	cveName := ""
+	for i := 0; i < len(lines); i++ {
+		if strings.HasPrefix(lines[i], "Candidate:") && cveName == "" {
+			//cveName = strings.TrimSpace(cveName)
+			cveName, i = tabbedLines(lines, "Candidate:", i)
 			continue
 		}
-		if strings.HasPrefix(lines[i], "Description:") { //got Description
-			for i++; i < len(lines) && strings.HasPrefix(lines[i], " "); i++ { // so long as line begins with " "
-				descr = descr + strings.TrimSpace(lines[i]) + " "
-			}
-			descr = strings.TrimSpace(descr)
+		if strings.HasPrefix(lines[i], "PublicDate:") {
+			cveData.PublicDate, i = tabbedLines(lines, "PublicDate:", i)
 			continue
 		}
-		if strings.HasPrefix(lines[i], "Priority:") { //got urgency
-			urgency = strings.TrimPrefix(lines[i], "Priority:")
-			urgency = strings.TrimSpace(urgency)
+		if strings.HasPrefix(lines[i], "References:") {
+			cveData.References, i = tabbedLines(lines, "References:", i)
 			continue
 		}
-		pkg := ""
+		if strings.HasPrefix(lines[i], "Description:") {
+			cveData.Description, i = tabbedLines(lines, "Description:", i)
+			continue
+		}
+		if strings.HasPrefix(lines[i], "Ubuntu-Description:") {
+			cveData.UbuntuDescription, i = tabbedLines(lines, "Ubuntu-Description:", i)
+			continue
+		}
+		if strings.HasPrefix(lines[i], "Notes:") {
+			cveData.Notes, i = tabbedLines(lines, "Notes:", i)
+			continue
+		}
+		if strings.HasPrefix(lines[i], "Mitigation:") {
+			cveData.Mitigation, i = tabbedLines(lines, "Mitigation:", i)
+			continue
+		}
+		if strings.HasPrefix(lines[i], "Priority:") {
+			cveData.Priority, i = tabbedLines(lines, "Priority:", i)
+			continue
+		}
+		if strings.HasPrefix(lines[i], "Discovered-by:") {
+			cveData.Discovered, i = tabbedLines(lines, "Discovered-by:", i)
+			continue
+		}
+		if strings.HasPrefix(lines[i], "Assigned-to:") {
+			cveData.Assigned, i = tabbedLines(lines, "Assigned-to:", i)
+			continue
+		}
+		if strings.HasPrefix(lines[i], "CVSS:") {
+			cveData.Cvss, i = tabbedLines(lines, "CVSS:", i)
+			continue
+		}
+
 		if strings.HasPrefix(lines[i], "Patches_") { //got package name
-			pkg = strings.TrimPrefix(lines[i], "Patches_")
-			pkg = strings.Trim(pkg, ": ")
-			pkgs[pkg] = cve                                                   //assign to package empty Response
-			for i++; i < len(lines) && strings.Contains(lines[i], pkg); i++ { //search and fill releases for each package
-				//get release name
-				//ex: hardy_libxml2: not-affected (2.6.31.dfsg-2ubuntu1)
-				// releaseName = hardy
-				// status = not-affected
-				// releaseVersion = 2.6.31.dfsg-2ubuntu1
-				releaseInfo := strings.Split(lines[i], ":")
-				if len(releaseInfo) < 2 {
+			pkgName := strings.TrimPrefix(lines[i], "Patches_")
+			pkgName = strings.Trim(pkgName, ": ")
+			pkgs := map[string][]uRelease{pkgName: []uRelease{}}
+			for i++; i < len(lines) && strings.Contains(lines[i], pkgName); i++ { //all about release
+				nameStatus := strings.Split(lines[i], ":")
+				if len(nameStatus) < 2 {
 					continue
 				}
-				releaseName := strings.TrimSuffix(releaseInfo[0], "_"+pkg)
-				releaseInfo[1] = strings.TrimSpace(releaseInfo[1])
-				status_version := strings.Split(releaseInfo[1], " ")
-				status := strings.TrimSpace(status_version[0])
-				releaseVersion := ""
-				if len(status_version) > 1 {
-					releaseVersion = strings.Trim((status_version[1]), "()")
-				}
-				releases[releaseName] = Release{
-					fixedVersion,
-					map[string]string{releaseName: releaseVersion},
-					status,
-					urgency,
-				}
+				release := uRelease{}
+				release.Name = strings.TrimSuffix(nameStatus[0], "_"+pkgName)
+				release.Status = strings.TrimSpace(nameStatus[1])
+				pkgs[pkgName] = append(pkgs[pkgName], release)
 			}
-			if pkg == "" || cveid == "" {
-				continue
-			}
-			pkgs[pkg][cveid] = CveData{
-				descr,
-				releases,
-				"local",
-			}
+			cveData.Packages = pkgs
+		}
+		if cveName != "" {
+			cve = uCve{cveName: cveData}
 		}
 	}
-	return pkgs, nil
+	return &cve
 }
 
 func (p *ubuntu) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, error) {
-	return nil, nil
+	// the same as debian.Query
+	d := debian{name: "ubuntu"} //fake debian object
+	return d.Query(cveId, pkgName, rdb)
 }

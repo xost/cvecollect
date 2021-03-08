@@ -29,7 +29,7 @@ type Repository map[string]string
 type Package map[string]CveData
 
 //map["CveId"]["PackageName"]CveData
-type Cve map[string]map[string]CveData
+type Cve map[string]Package
 
 type Collector interface {
 	Collect(*rejson.Handler) (interface{}, error)

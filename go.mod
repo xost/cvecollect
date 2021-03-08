@@ -3,6 +3,7 @@ module github.com/xost/cvecollect
 go 1.14
 
 require (
+	github.com/go-delve/delve v1.6.0 // indirect
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-redis/redis/v8 v8.5.0
 	github.com/gomodule/redigo v1.8.3

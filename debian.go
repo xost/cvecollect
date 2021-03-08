@@ -95,7 +95,7 @@ func (p *debian) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, erro
 	}
 	cveBytes, ok := cveData.([]byte)
 	if !ok {
-		return nil, errors.New("Can't case ....")
+		return nil, errors.New("Can't case ....: ")
 	}
 	return cveBytes, nil
 }
