@@ -78,9 +78,9 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 			rlog.Error(err)
 			continue
 		}
-		linkCh := make(chan string, 10)
-		dataCh := make(chan []byte, 10)
-		respCh := make(chan *uCve, 7)
+		linkCh := make(chan string, 8)
+		dataCh := make(chan []byte, 100)
+		respCh := make(chan *uCve, 100)
 		var wgLink, wgData, wgResp sync.WaitGroup
 		count := 0
 		go func() {
