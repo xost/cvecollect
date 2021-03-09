@@ -56,7 +56,8 @@ func NewUbuntu() *ubuntu {
 		"ubuntu",
 		"Ubuntu CVE data.",
 		url,
-		[]string{"/tree/active", "/tree/retired"},
+		[]string{"/tree/active"},
+		//[]string{"/tree/active", "/tree/retired"},
 	}
 }
 
@@ -78,49 +79,59 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 			rlog.Error(err)
 			continue
 		}
-		linkCh := make(chan string, 8)
-		dataCh := make(chan []byte, 100)
-		respCh := make(chan *uCve, 1000)
-		var wgLink, wgData, wgResp sync.WaitGroup
+		linkCh := make(chan string, 25)
+		dataCh := make(chan []byte, 200)
+		respCh := make(chan *uCve, 100)
+		var wgr sync.WaitGroup
 		go func() {
 			for d := range dataCh {
-				wgData.Add(1)
-				p.parseRaw(d, respCh)
-				wgData.Done()
+				wgr.Add(1)
+				go func(dd []byte) {
+					p.parseRaw(dd, respCh)
+					wgr.Done()
+				}(d)
 			}
+			wgr.Wait()
+			close(respCh)
 		}()
+
 		go func() {
-			for r := range respCh {
-				wgResp.Add(1)
-				for k, v := range *r {
-					resp[k] = v
-				}
-				wgResp.Done()
+			var wg sync.WaitGroup
+			for i := 0; i < 8; i++ {
+				wg.Add(1)
+				go func() {
+					for link := range linkCh {
+						p.readUrl(link, dataCh)
+					}
+					wg.Done()
+				}()
 			}
+			wg.Wait()
+			close(dataCh)
 		}()
-		for i := 0; i < 8; i++ {
-			go func() {
-				for link := range linkCh {
-					p.readUrl(link, dataCh)
-					wgLink.Done()
-				}
-			}()
-		}
-		links = links[:111]
+
+		links = links[8000 : len(links)-1] //plug
 		rlog.Info("total links:", len(links))
 		for i, link := range links {
-			wgLink.Add(1)
+			linkCh <- p.url.Scheme + "://" + p.url.Host + link
 			if i%100 == 0 {
 				rlog.Info(i, "link is parsed")
 			}
-			linkCh <- p.url.Scheme + "://" + p.url.Host + link
 		}
-		wgLink.Wait()
+
 		close(linkCh)
-		wgData.Wait()
-		close(dataCh)
-		wgResp.Wait()
-		close(respCh)
+
+		c := 0
+		for r := range respCh {
+			for k, v := range *r {
+				if _, ok := resp[k]; ok {
+					rlog.Debug("key:", k, "is exists")
+				}
+				c++
+				resp[k] = v
+			}
+		}
+		rlog.Debug(len(resp), c)
 	}
 	return resp, nil
 }
@@ -157,7 +168,7 @@ func (u *ubuntu) readUrl(url string, dataCh chan<- []byte) {
 	if err != nil {
 		return
 	}
-	req.Header.Set("User-Agent", "Golang_CVECollector_Bot/1.0")
+	//req.Header.Set("User-Agent", "Golang_CVECollector_Bot/1.0")
 	resp, err := c.Do(req)
 	if err != nil {
 		rlog.Error(err)
@@ -181,15 +192,32 @@ func (u *ubuntu) readUrl(url string, dataCh chan<- []byte) {
 func (u *ubuntu) parseRaw(raw []byte, respCh chan<- *uCve) {
 	rdr := bytes.NewReader(raw)
 	doc := html.NewTokenizer(rdr)
+	//for {
+	//	tt := doc.Next()
+	//	switch {
+	//	case tt == html.ErrorToken:
+	//		return
+	//	case tt == html.StartTagToken:
+	//		t := doc.Token()
+	//		if t.Data == "code" {
+	//			rlog.Println(t)
+	//		}
+	//	}
+	//}
 	for tknType := doc.Next(); tknType != html.ErrorToken; tknType = doc.Next() {
 		tkn := doc.Token()
-		if tknType == html.TextToken {
+		if tkn.Data == "code" && tknType == html.StartTagToken {
+			doc.Next()
+			tkn = doc.Token()
+			//if tknType == html.TextToken {
 			data := tkn.Data
+			//rlog.Debug(data)
 			resp := u.parseText([]byte(data))
 			if resp == nil {
 				continue
 			}
 			respCh <- resp
+			//}
 		}
 	}
 }
@@ -201,7 +229,6 @@ func (p *ubuntu) parseText(data []byte) *uCve {
 	cveName := ""
 	for i := 0; i < len(lines); i++ {
 		if strings.HasPrefix(lines[i], "Candidate:") && cveName == "" {
-			//cveName = strings.TrimSpace(cveName)
 			cveName, i = tabbedLines(lines, "Candidate:", i)
 			continue
 		}

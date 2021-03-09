@@ -159,7 +159,7 @@ func TestUbuntuQuery(t *testing.T) {
 		rlog.Error(err)
 		return
 	}
-	cveId := "2019-5060"
+	cveId := "2021-3409"
 	j, err := c.Query(cveId, "", rh)
 	if err != nil {
 		t.Error(err)
