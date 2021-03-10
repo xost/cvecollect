@@ -56,8 +56,8 @@ func NewUbuntu() *ubuntu {
 		"ubuntu",
 		"Ubuntu CVE data.",
 		url,
-		[]string{"/tree/active"},
-		//[]string{"/tree/active", "/tree/retired"},
+		//[]string{"/tree/active"},
+		[]string{"/tree/active", "/tree/retired"},
 	}
 }
 
@@ -79,7 +79,7 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 			rlog.Error(err)
 			continue
 		}
-		linkCh := make(chan string, 25)
+		linkCh := make(chan string, 10)
 		dataCh := make(chan []byte, 200)
 		respCh := make(chan *uCve, 100)
 		var wgr sync.WaitGroup
@@ -109,8 +109,21 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 			wg.Wait()
 			close(dataCh)
 		}()
+		//it produce 503 error due to cloudflare ddos protect
+		//go func() {
+		//	var wg sync.WaitGroup
+		//	for link := range linkCh {
+		//		wg.Add(1)
+		//		go func(l string, w *sync.WaitGroup) {
+		//			p.readUrl(l, dataCh)
+		//			wg.Done()
+		//		}(link, &wg)
+		//	}
+		//	wg.Wait()
+		//	close(dataCh)
+		//}()
 
-		links = links[8000 : len(links)-1] //plug
+		//links = links[8000 : len(links)-1] //plug
 		rlog.Info("total links:", len(links))
 		for i, link := range links {
 			linkCh <- p.url.Scheme + "://" + p.url.Host + link
@@ -184,7 +197,6 @@ func (u *ubuntu) readUrl(url string, dataCh chan<- []byte) {
 		rlog.Error(url, "http status code:", resp.StatusCode)
 		return
 	} else {
-		//rlog.Debug(resp.StatusCode)
 	}
 	dataCh <- data
 }
@@ -192,32 +204,17 @@ func (u *ubuntu) readUrl(url string, dataCh chan<- []byte) {
 func (u *ubuntu) parseRaw(raw []byte, respCh chan<- *uCve) {
 	rdr := bytes.NewReader(raw)
 	doc := html.NewTokenizer(rdr)
-	//for {
-	//	tt := doc.Next()
-	//	switch {
-	//	case tt == html.ErrorToken:
-	//		return
-	//	case tt == html.StartTagToken:
-	//		t := doc.Token()
-	//		if t.Data == "code" {
-	//			rlog.Println(t)
-	//		}
-	//	}
-	//}
 	for tknType := doc.Next(); tknType != html.ErrorToken; tknType = doc.Next() {
 		tkn := doc.Token()
 		if tkn.Data == "code" && tknType == html.StartTagToken {
 			doc.Next()
 			tkn = doc.Token()
-			//if tknType == html.TextToken {
 			data := tkn.Data
-			//rlog.Debug(data)
 			resp := u.parseText([]byte(data))
 			if resp == nil {
 				continue
 			}
 			respCh <- resp
-			//}
 		}
 	}
 }

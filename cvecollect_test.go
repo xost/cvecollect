@@ -148,18 +148,18 @@ func UbuntuCollectAll(t *testing.T) {
 
 func TestUbuntuQuery(t *testing.T) {
 	c := NewUbuntu()
-	data, err := c.Collect(rh)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	res, err := rh.JSONSet(c.Name(), ".", data)
-	if err != nil || res.(string) != "OK" {
-		rlog.Error("Failed to update CVE data")
-		rlog.Error(err)
-		return
-	}
-	cveId := "2021-3409"
+	//data, err := c.Collect(rh)
+	//if err != nil {
+	//	t.Error(err)
+	//	return
+	//}
+	//res, err := rh.JSONSet(c.Name(), ".", data)
+	//if err != nil || res.(string) != "OK" {
+	//	rlog.Error("Failed to update CVE data")
+	//	rlog.Error(err)
+	//	return
+	//}
+	cveId := "2018-10906"
 	j, err := c.Query(cveId, "", rh)
 	if err != nil {
 		t.Error(err)
@@ -191,17 +191,17 @@ func DebianCollect(t *testing.T) {
 	rlog.Debug(cveData["CVE-2018-10906"])
 }
 
-func DebianQuery(t *testing.T) {
+func TestDebianQuery(t *testing.T) {
 	c := NewDebian()
-	data, err := c.Collect(rh)
-	if err != nil {
-		t.Error(err)
-	}
-	res, err := rh.JSONSet(c.Name(), ".", data)
-	if err != nil || res.(string) != "OK" {
-		rlog.Error("Failed to update CVE data")
-		rlog.Error(err)
-	}
+	//data, err := c.Collect(rh)
+	//if err != nil {
+	//	t.Error(err)
+	//}
+	//res, err := rh.JSONSet(c.Name(), ".", data)
+	//if err != nil || res.(string) != "OK" {
+	//	rlog.Error("Failed to update CVE data")
+	//	rlog.Error(err)
+	//}
 	j, err := c.Query("2018-10906", "fuse3", rh)
 	if err != nil {
 		t.Error(err)
