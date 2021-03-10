@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/nitishm/go-rejson"
+	"github.com/romana/rlog"
 )
 
 type debian struct {
@@ -89,6 +90,7 @@ func (p *debian) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, erro
 	if pkgName != "" {
 		path += fmt.Sprintf("[\"%s\"]", pkgName)
 	}
+	rlog.Debug(path)
 	cveData, err := rdb.JSONGet(p.Name(), path)
 	if err != nil {
 		return nil, err

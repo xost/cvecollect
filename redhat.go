@@ -66,13 +66,13 @@ func (p *redhat) Name() string {
 	return p.name
 }
 
-func (p *redhat) Description() string {
+func (p *redhat) Descr() string {
 	return p.descr
 }
 
-func (p *redhat) Collect() error {
+func (p *redhat) Collect(rdb *rejson.Handler) (interface{}, error) {
 	//redhat.Collect does not collect any data
-	return nil
+	return nil, nil
 }
 
 func (p *redhat) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, error) {

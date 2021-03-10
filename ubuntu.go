@@ -109,7 +109,7 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 			wg.Wait()
 			close(dataCh)
 		}()
-		//it produce 503 error due to cloudflare ddos protect
+		//it produce 503 error. maybe cloudflare ddos protection
 		//go func() {
 		//	var wg sync.WaitGroup
 		//	for link := range linkCh {
@@ -134,17 +134,14 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 
 		close(linkCh)
 
-		c := 0
 		for r := range respCh {
 			for k, v := range *r {
 				if _, ok := resp[k]; ok {
 					rlog.Debug("key:", k, "is exists")
 				}
-				c++
 				resp[k] = v
 			}
 		}
-		rlog.Debug(len(resp), c)
 	}
 	return resp, nil
 }

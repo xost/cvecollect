@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,10 +17,11 @@ var (
 		"ubuntu": "https://git.launchpad.net/ubuntu-cve-tracker",
 		"redhat": "https://access.redhat.com/labs/securitydataapi/cve",
 	}
-	addr = ""
-	port = ""
-	db   redis.Conn
-	rh   *rejson.Handler
+	addr       = ""
+	port       = ""
+	db         redis.Conn
+	rh         *rejson.Handler
+	collectors map[string]Collector
 )
 
 func init() {
@@ -55,13 +54,19 @@ func init() {
 	}
 	rh = rejson.NewReJSONHandler()
 	rh.SetRedigoClient(db)
+
+	collectors = map[string]Collector{
+		"debian": NewDebian(),
+		"ubuntu": NewUbuntu(),
+		"redhat": NewRedhat(),
+	}
 }
 
 func main() {
 	defer db.Close()
-	http.Handle("/help", logWrapper(handleHelp))
-	http.Handle("/update", logWrapper(handleUpdate))
-	http.Handle("/cve/", logWrapper(handleGetCve))
+	http.Handle("/api/help", logWrapper(handleHelp))
+	http.Handle("/api/update", logWrapper(handleUpdate))
+	http.Handle("/api/cve/", logWrapper(handleGetCve))
 
 	rlog.Info("Listen on " + addr + ":" + port)
 	err := http.ListenAndServe(addr+":"+port, nil)
@@ -90,10 +95,6 @@ func handleHelp(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleUpdate(w http.ResponseWriter, r *http.Request) {
-	collectors := []Collector{
-		NewDebian(),
-		NewUbuntu(),
-	}
 	for _, c := range collectors {
 		rlog.Info("Collecting CVE data for:", "\""+c.Name()+"\"")
 		resp, err := c.Collect(rh)
@@ -116,79 +117,34 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 
 func handleGetCve(w http.ResponseWriter, r *http.Request) { //todo cut and devide this func
 	pathElements := strings.Split(r.URL.EscapedPath(), "/")
-	if len(pathElements) != 3 {
+	if len(pathElements) != 4 {
 		rlog.Error("Bad request")
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Bad request"))
 		return
 	}
-	cveid := "CVE-" + pathElements[len(pathElements)-1]
+	cveId := pathElements[len(pathElements)-1]
 	src := r.URL.Query().Get("source")
 	pkg := r.URL.Query().Get("pkg")
-	rlog.Debug("source=", src, ", pkg=", pkg, ", cveid=", cveid)
-	if src != "" && pkg != "" { //all params is present
-		path := fmt.Sprintf(".%s[\"%s\"]", pkg, cveid)
-		rlog.Debug("path=", path, "\n")
-		raw, err := rh.JSONGet(src, path)
-		if err != nil {
-			rlog.Error(err)
-			return
-		}
-		rawBytes, ok := raw.([]byte)
-		if !ok {
-			rlog.Error("Internal server error")
-			rlog.Debug("Can't parse redis's response")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Internal server error"))
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write(rawBytes)
-		return
+	rlog.Debug("cveId:", cveId, ", source:", src, ", pkg:", pkg)
+	var source map[string]Collector
+	if src != "" {
+		source = map[string]Collector{src: collectors[src]}
+	} else {
+		source = collectors
 	}
-	if src != "" { //pkg is empty src and cveid is present
-		rlog.Debug("path= .", "\n")
-		raw, err := rh.JSONGet(src, ".")
+	json := make([]byte, 0)
+	for name, c := range source {
+		jsonRaw, err := c.Query(cveId, pkg, rh)
 		if err != nil {
-			rlog.Error(err)
-			return
+			rlog.Error(name, err)
+			continue
 		}
-		rawBytes, ok := raw.([]byte)
-		if !ok {
-			rlog.Error("Internal server error")
-			rlog.Debug("Can't parse redis's response")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Internal server error"))
-			return
-		}
-		resp := Response{}
-		err = json.Unmarshal(rawBytes, &resp)
-		if err != nil {
-			rlog.Error("Internal server error")
-			rlog.Debug("Can't parse redis's response")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Internal server error"))
-			return
-		}
-		resp1 := Response{}
-		for k, v := range resp { //looking for particular cveid
-			if cve, ok := v[cveid]; ok {
-				rlog.Debug(k, cve)
-				resp1[k] = map[string]CveData{cveid: cve}
-			}
-		}
-		bytesResponse, err := json.Marshal(resp1)
-		if err != nil {
-			rlog.Error("Internal server error")
-			rlog.Debug("Can't parse redis's response")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Internal server error"))
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write(bytesResponse)
-		return
+		json = append(json, jsonRaw...)
+		rlog.Debug(jsonRaw)
 	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(json)
 }
 
 func genPath(u *url.URL) (string, error) {

@@ -11,6 +11,7 @@ COPY go.mod \
   main.go \
   types.go \
   debian.go \
+  redhat.go \
   ubuntu.go \
   util.go \
   /app/
