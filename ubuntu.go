@@ -2,6 +2,9 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -292,6 +295,40 @@ func (p *ubuntu) parseText(data []byte) *uCve {
 
 func (p *ubuntu) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, error) {
 	// the same as debian.Query
-	d := debian{name: "ubuntu"} //fake debian object
-	return d.Query(cveId, pkgName, rdb)
+	//d := debian{name: "ubuntu"} //fake debian object
+	//return d.Query(cveId, pkgName, rdb)
+
+	cveName := "CVE-" + cveId
+	path := fmt.Sprintf("[\"%s\"]", cveName)
+
+	cveData, err := rdb.JSONGet(p.Name(), path)
+	if err != nil {
+		return nil, err
+	}
+	cveBytes, ok := cveData.([]byte)
+	if !ok {
+		return nil, errors.New("Can't case ....: ")
+	}
+	if pkgName != "" {
+		c := uCveData{}
+		err := json.Unmarshal(cveBytes, &c)
+		if err != nil {
+			return nil, err
+		}
+		for name, _ := range c.Packages {
+			rlog.Debug(name)
+			if name != pkgName {
+				delete(c.Packages, name)
+			}
+		}
+		if len(c.Packages) < 1 {
+			return nil, errors.New("requested package does not found")
+		}
+		cveBytes, err = json.Marshal(&c)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return cveBytes, nil
+
 }

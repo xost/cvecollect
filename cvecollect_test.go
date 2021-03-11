@@ -160,7 +160,8 @@ func TestUbuntuQuery(t *testing.T) {
 	//	return
 	//}
 	cveId := "2018-10906"
-	j, err := c.Query(cveId, "", rh)
+	j, err := c.Query(cveId, "fuse3", rh)
+	_ = j
 	if err != nil {
 		t.Error(err)
 		return
@@ -191,7 +192,7 @@ func DebianCollect(t *testing.T) {
 	rlog.Debug(cveData["CVE-2018-10906"])
 }
 
-func TestDebianQuery(t *testing.T) {
+func DebianQuery(t *testing.T) {
 	c := NewDebian()
 	//data, err := c.Collect(rh)
 	//if err != nil {
