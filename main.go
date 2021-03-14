@@ -60,6 +60,7 @@ func init() {
 		"debian": NewDebian(),
 		"ubuntu": NewUbuntu(),
 		"redhat": NewRedhat(),
+		"nist":   NewNist(),
 	}
 }
 

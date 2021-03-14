@@ -3,6 +3,8 @@ package main
 import (
 	"compress/gzip"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -76,5 +78,14 @@ func (p *nist) Collect(rdb *rejson.Handler) (interface{}, error) {
 }
 
 func (p *nist) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, error) {
-	return nil, nil
+	path := fmt.Sprintf("[\"%s\"]", cveId)
+	rawData, err := rdb.JSONGet(p.Name(), path)
+	if err != nil {
+		return nil, err
+	}
+	data, ok := rawData.([]byte)
+	if !ok {
+		return nil, errors.New("Can't cast to []byte")
+	}
+	return data, nil
 }

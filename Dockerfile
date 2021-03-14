@@ -13,6 +13,7 @@ COPY go.mod \
   debian.go \
   redhat.go \
   ubuntu.go \
+  nist.go \
   util.go \
   /app/
 
