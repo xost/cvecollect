@@ -1,7 +1,13 @@
 package main
 
 import (
+	"compress/gzip"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
+
 	"github.com/nitishm/go-rejson"
+	"github.com/romana/rlog"
 )
 
 type nist struct {
@@ -37,7 +43,36 @@ func (p *nist) Descr() string {
 }
 
 func (p *nist) Collect(rdb *rejson.Handler) (interface{}, error) {
-	return nil, nil
+	//get gzip file
+	req, err := http.NewRequest("GET", p.url, nil)
+	if err != nil {
+		return nil, err
+	}
+	c := http.Client{}
+	rlog.Info("Fetching nist file")
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	//decompress gzip file
+	rlog.Info("Decompressing nist file")
+	r, err := gzip.NewReader(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	rawData, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	//parse file to struct
+	data := make(map[string][]nistCpeData)
+	err = json.Unmarshal(rawData, &data)
+	if err != nil {
+		return nil, err
+	}
+	//return []nistCpeData
+	return data["matches"], nil
 }
 
 func (p *nist) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, error) {

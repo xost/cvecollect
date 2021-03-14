@@ -112,7 +112,7 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 			wg.Wait()
 			close(dataCh)
 		}()
-		//it produce 503 error. maybe cloudflare ddos protection
+		//it produces 503 error. maybe because ddos protection
 		//go func() {
 		//	var wg sync.WaitGroup
 		//	for link := range linkCh {
@@ -134,7 +134,6 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 				rlog.Info(i, "link is parsed")
 			}
 		}
-
 		close(linkCh)
 
 		for r := range respCh {
@@ -224,6 +223,7 @@ func (p *ubuntu) parseText(data []byte) *uCve {
 	var cve uCve // nil
 	cveData := uCveData{}
 	cveName := ""
+	pkgs := make(map[string][]uRelease)
 	for i := 0; i < len(lines); i++ {
 		if strings.HasPrefix(lines[i], "Candidate:") && cveName == "" {
 			cveName, i = tabbedLines(lines, "Candidate:", i)
@@ -269,11 +269,10 @@ func (p *ubuntu) parseText(data []byte) *uCve {
 			cveData.Cvss, i = tabbedLines(lines, "CVSS:", i)
 			continue
 		}
-
 		if strings.HasPrefix(lines[i], "Patches_") { //got package name
 			pkgName := strings.TrimPrefix(lines[i], "Patches_")
 			pkgName = strings.Trim(pkgName, ": ")
-			pkgs := map[string][]uRelease{pkgName: []uRelease{}}
+			pkgs[pkgName] = make([]uRelease, 0)
 			for i++; i < len(lines) && strings.Contains(lines[i], pkgName); i++ { //all about release
 				nameStatus := strings.Split(lines[i], ":")
 				if len(nameStatus) < 2 {

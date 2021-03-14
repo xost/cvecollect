@@ -146,7 +146,7 @@ func UbuntuCollectAll(t *testing.T) {
 	fmt.Println(resp)
 }
 
-func TestUbuntuQuery(t *testing.T) {
+func UbuntuQuery(t *testing.T) {
 	c := NewUbuntu()
 	//data, err := c.Collect(rh)
 	//if err != nil {
@@ -160,13 +160,35 @@ func TestUbuntuQuery(t *testing.T) {
 	//	return
 	//}
 	cveId := "2018-10906"
-	j, err := c.Query(cveId, "fuse3", rh)
+	j, err := c.Query(cveId, "", rh)
 	_ = j
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	rlog.Debug(string(j))
+}
+
+func Query(t *testing.T) {
+	url := "https://127.0.0.1:3000/api/cve/2018-10906?source=ubuntu&pkg=fuse"
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	c := http.Client{}
+	resp, err := c.Do(req)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer resp.Body.Close()
+	bts, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	rlog.Println(string(bts))
 }
 
 func HandleUpdate(t *testing.T) {
@@ -226,4 +248,15 @@ func RedhatQeury(t *testing.T) {
 	for _, p := range data.Packages {
 		rlog.Println(p.Name)
 	}
+}
+
+func TestNistCollect(t *testing.T) {
+	c := NewNist()
+	data, err := c.Collect(rh)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	_ = data
+	//rlog.Debug(data)
 }
