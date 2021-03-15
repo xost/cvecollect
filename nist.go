@@ -80,11 +80,13 @@ func (p *nist) Collect(rdb *rejson.Handler) (interface{}, error) {
 func (p *nist) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, error) {
 	path := fmt.Sprintf("[\"%s\"]", cveId)
 	rawData, err := rdb.JSONGet(p.Name(), path)
+	rlog.Debug(p.Name(), path)
 	if err != nil {
 		return nil, err
 	}
 	data, ok := rawData.([]byte)
 	if !ok {
+		rlog.Debug("***", data)
 		return nil, errors.New("Can't cast to []byte")
 	}
 	return data, nil

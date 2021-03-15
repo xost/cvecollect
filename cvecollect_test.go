@@ -250,7 +250,7 @@ func RedhatQeury(t *testing.T) {
 	}
 }
 
-func TestNistCollect(t *testing.T) {
+func NistCollect(t *testing.T) {
 	c := NewNist()
 	data, err := c.Collect(rh)
 	if err != nil {
@@ -259,4 +259,15 @@ func TestNistCollect(t *testing.T) {
 	}
 	_ = data
 	//rlog.Debug(data)
+}
+
+func TestNistQuery(t *testing.T) {
+	n := NewNist()
+	cveId := "cpe:2.3:h:-:wireless_ip_camera_360:-:*:*:*:*:*:*:*"
+	data, err := n.Query(cveId, "", rh)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	rlog.Debug(data)
 }
