@@ -14,7 +14,8 @@ import (
 )
 
 var (
-	jsonFileName  = "debTest.json"
+	jsonDebFile = "debTest.json"
+
 	ubuntuCveText = `Candidate: CVE-2018-10906
 PublicDate: 2018-07-24 20:29:00 UTC
 References:
@@ -68,10 +69,12 @@ eoan_fuse: ignored (reached end-of-life)
 focal_fuse: needs-triage
 groovy_fuse: needs-triage
 devel_fuse: needs-triage`
+
+	redhatJsonFile = "redhatTest.json"
 )
 
 func Deb(t *testing.T) {
-	fh, err := os.Open(jsonFileName)
+	fh, err := os.Open(jsonDebFile)
 	if err != nil {
 		t.Error(err)
 	}
@@ -80,7 +83,7 @@ func Deb(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	resp := new(Response)
+	resp := new(debResponse)
 	err = json.Unmarshal(raw, &resp)
 	if err != nil {
 		t.Error(err)
@@ -92,11 +95,11 @@ func DebRequest(t *testing.T) {
 	d := debian{}
 	d.setURL(sources["debian"])
 	raw := make([]byte, 0)
-	_, err := d.Read(&raw)
+	_, err := d.read(&raw)
 	if err != nil {
 		t.Error(err)
 	}
-	resp := Response{}
+	resp := debResponse{}
 	err = json.Unmarshal(raw, &resp)
 	if err != nil {
 		t.Error(err)
@@ -107,7 +110,7 @@ func DebRequest(t *testing.T) {
 func RedisStore(t *testing.T) {
 	d := NewDebian()
 	raw := make([]byte, 0)
-	_, err := d.Read(&raw)
+	_, err := d.read(&raw)
 	if err != nil {
 		t.Error(err)
 	}
@@ -138,7 +141,7 @@ func RedisStore(t *testing.T) {
 func UbuntuCollectAll(t *testing.T) {
 	rlog.Debug("Go test ubuntu CollectAll")
 	u := NewUbuntu()
-	resp, err := u.Collect(rh)
+	resp, err := u.Collect()
 	if err != nil {
 		t.Error(err)
 		return
@@ -159,8 +162,8 @@ func UbuntuQuery(t *testing.T) {
 	//	rlog.Error(err)
 	//	return
 	//}
-	cveId := "2018-10906"
-	j, err := c.Query(cveId, "", rh)
+	cveID := "2018-10906"
+	j, err := c.Query(cveID, "", rh)
 	_ = j
 	if err != nil {
 		t.Error(err)
@@ -206,11 +209,11 @@ func HandleUpdate(t *testing.T) {
 
 func DebianCollect(t *testing.T) {
 	c := NewDebian()
-	data, err := c.Collect(rh)
+	data, err := c.Collect()
 	if err != nil {
 		t.Error(err)
 	}
-	cveData := data.(Cve)
+	cveData := data.(debCve)
 	rlog.Debug(cveData["CVE-2018-10906"])
 }
 
@@ -252,7 +255,7 @@ func RedhatQeury(t *testing.T) {
 
 func NistCollect(t *testing.T) {
 	c := NewNist()
-	data, err := c.Collect(rh)
+	data, err := c.Collect()
 	if err != nil {
 		t.Error(err)
 		return
@@ -261,14 +264,61 @@ func NistCollect(t *testing.T) {
 	//rlog.Debug(data)
 }
 
-func TestNistQuery(t *testing.T) {
+func NistQuery(t *testing.T) {
 	n := NewNist()
-	cveId := "cpe:2.3:a:10web:form_maker:*:*:*:*:*:wordpress:*:*"
-	//cveId := "cpe:2.3:o:zyxel:zld:*:*:*:*:*:*:*:*"
-	data, err := n.Query(cveId, "", rh)
+	cveID := "cpe:2.3:a:10web:form_maker:*:*:*:*:*:wordpress:*:*"
+	//cveID := "cpe:2.3:o:zyxel:zld:*:*:*:*:*:*:*:*"
+	data, err := n.Query(cveID, "", rh)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	rlog.Debug(string(data))
+}
+
+func TestDebCollect(t *testing.T) {
+	d := NewDebian()
+	data, err := d.Collect()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	debData, ok := data.(debCve)
+	if !ok {
+		t.Error("Can't cast result to debCve type")
+		return
+	}
+	if len(debData) == 0 {
+		t.Error("Result is empty")
+		return
+	}
+}
+
+//it takes about 2 hours
+//func TestUbuntuCollect(t *testing.T) {
+//	d := NewUbuntu()
+//	data, err := d.Collect()
+//	if err != nil {
+//		t.Error(err)
+//		return
+//	}
+//}
+
+func TestRHCollect(t *testing.T) {
+	d := NewDebian()
+	data, err := d.Collect()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	_ = data
+}
+func TestNistCollect(t *testing.T) {
+	d := NewDebian()
+	data, err := d.Collect()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	_ = data
 }

@@ -76,7 +76,7 @@ func (p *nist) Descr() string {
 	return p.descr
 }
 
-func (p *nist) Collect(rdb *rejson.Handler) (interface{}, error) {
+func (p *nist) Collect() (interface{}, error) {
 	//get gzip file
 	req, err := http.NewRequest("GET", p.url, nil)
 	if err != nil {

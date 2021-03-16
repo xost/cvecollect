@@ -64,20 +64,20 @@ func NewUbuntu() *ubuntu {
 	}
 }
 
-func (p *ubuntu) Name() string {
-	return p.name
+func (u *ubuntu) Name() string {
+	return u.name
 }
 
-func (p *ubuntu) Descr() string {
-	return p.descr
+func (u *ubuntu) Descr() string {
+	return u.descr
 }
 
-func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put out of ubuntu object
+func (u *ubuntu) Collect() (interface{}, error) { //todo: put out of ubuntu object
 	resp := uCve{}
-	for _, dir := range p.dirs {
+	for _, dir := range u.dirs {
 		dirCh := make(chan []byte, 1)
-		p.readUrl(p.url.String()+dir, dirCh)
-		links, err := p.listLinks(<-dirCh)
+		u.readUrl(u.url.String()+dir, dirCh)
+		links, err := u.listLinks(<-dirCh)
 		if err != nil {
 			rlog.Error(err)
 			continue
@@ -90,7 +90,7 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 			for d := range dataCh {
 				wgr.Add(1)
 				go func(dd []byte) {
-					p.parseRaw(dd, respCh)
+					u.parseRaw(dd, respCh)
 					wgr.Done()
 				}(d)
 			}
@@ -104,7 +104,7 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 				wg.Add(1)
 				go func() {
 					for link := range linkCh {
-						p.readUrl(link, dataCh)
+						u.readUrl(link, dataCh)
 					}
 					wg.Done()
 				}()
@@ -118,7 +118,7 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 		//	for link := range linkCh {
 		//		wg.Add(1)
 		//		go func(l string, w *sync.WaitGroup) {
-		//			p.readUrl(l, dataCh)
+		//			u.readUrl(l, dataCh)
 		//			wg.Done()
 		//		}(link, &wg)
 		//	}
@@ -129,7 +129,7 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 		//links = links[8000 : len(links)-1] //plug
 		rlog.Info("total links:", len(links))
 		for i, link := range links {
-			linkCh <- p.url.Scheme + "://" + p.url.Host + link
+			linkCh <- u.url.Scheme + "://" + u.url.Host + link
 			if i%100 == 0 {
 				rlog.Info(i, "link is parsed")
 			}
@@ -148,7 +148,7 @@ func (p *ubuntu) Collect(rdb *rejson.Handler) (interface{}, error) { //todo: put
 	return resp, nil
 }
 
-func (p *ubuntu) listLinks(raw []byte) ([]string, error) {
+func (u *ubuntu) listLinks(raw []byte) ([]string, error) {
 	rdr := bytes.NewReader(raw)
 	doc := html.NewTokenizer(rdr)
 	rslt := make([]string, 0)
@@ -218,7 +218,7 @@ func (u *ubuntu) parseRaw(raw []byte, respCh chan<- *uCve) {
 	}
 }
 
-func (p *ubuntu) parseText(data []byte) *uCve {
+func (u *ubuntu) parseText(data []byte) *uCve {
 	lines := strings.Split(string(data), "\n")
 	var cve uCve // nil
 	cveData := uCveData{}
@@ -292,7 +292,7 @@ func (p *ubuntu) parseText(data []byte) *uCve {
 	return &cve
 }
 
-func (p *ubuntu) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, error) {
+func (u *ubuntu) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, error) {
 	// the same as debian.Query
 	//d := debian{name: "ubuntu"} //fake debian object
 	//return d.Query(cveId, pkgName, rdb)
@@ -300,7 +300,7 @@ func (p *ubuntu) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, erro
 	cveName := "CVE-" + cveId
 	path := fmt.Sprintf("[\"%s\"]", cveName)
 
-	cveData, err := rdb.JSONGet(p.Name(), path)
+	cveData, err := rdb.JSONGet(u.Name(), path)
 	if err != nil {
 		return nil, err
 	}

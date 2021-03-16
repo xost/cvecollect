@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 
@@ -99,7 +98,7 @@ func handleHelp(w http.ResponseWriter, r *http.Request) {
 func handleUpdate(w http.ResponseWriter, r *http.Request) {
 	for _, c := range collectors {
 		rlog.Info("Collecting CVE data for:", "\""+c.Name()+"\"")
-		resp, err := c.Collect(rh)
+		resp, err := c.Collect()
 		if err != nil {
 			rlog.Error(err)
 			continue
@@ -125,19 +124,19 @@ func handleGetCve(w http.ResponseWriter, r *http.Request) { //todo cut and devid
 		w.Write([]byte("Bad request"))
 		return
 	}
-	cveId := pathElements[len(pathElements)-1]
+	cveID := pathElements[len(pathElements)-1]
 	src := r.URL.Query().Get("source")
 	pkg := r.URL.Query().Get("pkg")
-	rlog.Debug("cveId:", cveId, ", source:", src, ", pkg:", pkg)
-	var source map[string]Collector
+	rlog.Debug("cveID:", cveID, ", source:", src, ", pkg:", pkg)
+	var sources map[string]Collector
 	if src != "" {
-		source = map[string]Collector{src: collectors[src]}
+		sources = map[string]Collector{src: collectors[src]}
 	} else {
-		source = collectors
+		sources = collectors
 	}
 	json := make([]byte, 0)
-	for name, c := range source {
-		jsonRaw, err := c.Query(cveId, pkg, rh)
+	for name, c := range sources {
+		jsonRaw, err := c.Query(cveID, pkg, rh)
 		if err != nil {
 			rlog.Error(name, err)
 			continue
@@ -149,6 +148,6 @@ func handleGetCve(w http.ResponseWriter, r *http.Request) { //todo cut and devid
 	w.Write(json)
 }
 
-func genPath(u *url.URL) (string, error) {
+func storeData(rdb *rejson.Handler) (string, error) {
 	return "", nil
 }

@@ -17,6 +17,7 @@ type debian struct {
 	descr string
 }
 
+//NewDebian returns cve collector object for 'debian' source
 func NewDebian() *debian {
 	return &debian{
 		sources["debian"],
@@ -29,15 +30,15 @@ func (d *debian) setURL(url string) {
 	d.url = url
 }
 
-func (p *debian) Descr() string {
-	return p.descr
+func (d *debian) Descr() string {
+	return d.descr
 }
 
-func (p *debian) Name() string {
-	return p.name
+func (d *debian) Name() string {
+	return d.name
 }
 
-func (d *debian) Read(data *[]byte) (int, error) {
+func (d *debian) read(data *[]byte) (int, error) {
 	c := http.Client{}
 	req, err := http.NewRequest("GET", d.url, nil)
 	if err != nil {
@@ -56,9 +57,9 @@ func (d *debian) Read(data *[]byte) (int, error) {
 	return len(*data), nil
 }
 
-func (d *debian) parse(raw []byte) (*Cve, error) {
-	data := Cve{}
-	j := Response{}
+func (d *debian) parse(raw []byte) (*debCve, error) {
+	data := debCve{}
+	j := debResponse{}
 	err := json.Unmarshal(raw, &j)
 	if err != nil {
 		return nil, err
@@ -66,7 +67,7 @@ func (d *debian) parse(raw []byte) (*Cve, error) {
 	for pkgName, cveMap := range j {
 		for cveId, cveData := range cveMap {
 			if _, ok := data[cveId]; !ok {
-				data[cveId] = Package{pkgName: cveData}
+				data[cveId] = debPackage{pkgName: cveData}
 			}
 			data[cveId][pkgName] = cveData
 		}
@@ -74,24 +75,24 @@ func (d *debian) parse(raw []byte) (*Cve, error) {
 	return &data, nil
 }
 
-func (p *debian) Collect(rdb *rejson.Handler) (interface{}, error) {
+func (d *debian) Collect() (interface{}, error) {
 	data := make([]byte, 0)
-	_, err := p.Read(&data) //do not handle err be cause anyway i return reps empty or not and err nil or not
+	_, err := d.read(&data)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := p.parse(data)
+	resp, err := d.parse(data)
 	return *resp, err
 }
 
-func (p *debian) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, error) {
+func (d *debian) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, error) {
 	cveName := "CVE-" + cveId
 	path := fmt.Sprintf("[\"%s\"]", cveName)
 	if pkgName != "" {
 		path += fmt.Sprintf("[\"%s\"]", pkgName)
 	}
 	rlog.Debug(path)
-	cveData, err := rdb.JSONGet(p.Name(), path)
+	cveData, err := rdb.JSONGet(d.Name(), path)
 	if err != nil {
 		return nil, err
 	}

@@ -70,13 +70,13 @@ func (p *redhat) Descr() string {
 	return p.descr
 }
 
-func (p *redhat) Collect(rdb *rejson.Handler) (interface{}, error) {
+func (p *redhat) Collect() (interface{}, error) {
 	//redhat.Collect does not collect any data
 	return nil, nil
 }
 
-func (p *redhat) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, error) {
-	cveName := "CVE-" + cveId
+func (p *redhat) Query(cveID, pkgName string, rdb *rejson.Handler) ([]byte, error) {
+	cveName := "CVE-" + cveID
 	c := http.Client{}
 	url := fmt.Sprintf("%s/%s.json", p.url, cveName)
 	req, err := http.NewRequest("GET", url, nil)
