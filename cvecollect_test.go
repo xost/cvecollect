@@ -263,11 +263,12 @@ func NistCollect(t *testing.T) {
 
 func TestNistQuery(t *testing.T) {
 	n := NewNist()
-	cveId := "cpe:2.3:h:-:wireless_ip_camera_360:-:*:*:*:*:*:*:*"
+	cveId := "cpe:2.3:a:10web:form_maker:*:*:*:*:*:wordpress:*:*"
+	//cveId := "cpe:2.3:o:zyxel:zld:*:*:*:*:*:*:*:*"
 	data, err := n.Query(cveId, "", rh)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	rlog.Debug(data)
+	rlog.Debug(string(data))
 }
