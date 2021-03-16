@@ -25,7 +25,7 @@ logs:
 	docker logs --follow cvecollect_app_1
 
 tests:
-	@PORT=$(PORT) RLOG_LOG_LEVEL=$(RLOG_LOG_LEVEL) go test -race
+	@PORT=$(PORT) RLOG_LOG_LEVEL=$(RLOG_LOG_LEVEL) go test -race -v
 
 cover:
-	@PORT=$(PORT) go test -coverprofile=cover.out && go tool cover -html=cover.out && unlink cover.out
+	@PORT=$(PORT) go test -coverprofile=cover.out -v && go tool cover -html=cover.out && unlink cover.out

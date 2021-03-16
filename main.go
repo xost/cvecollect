@@ -65,12 +65,9 @@ func init() {
 
 func main() {
 	defer db.Close()
-	http.Handle("/api/help", logWrapper(handleHelp))
-	http.Handle("/api/update", logWrapper(handleUpdate))
-	http.Handle("/api/cve/", logWrapper(handleGetCve))
 
 	rlog.Info("Listen on " + addr + ":" + port)
-	err := http.ListenAndServe(addr+":"+port, nil)
+	err := http.ListenAndServe(addr+":"+port, handlers())
 	if err != nil {
 		rlog.Critical(err)
 	}
@@ -89,10 +86,11 @@ func logWrapper(n http.HandlerFunc) http.Handler {
 	)
 }
 
-func handleHelp(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("/api/update – обновляет базу, загружая всю необходимую информацию из источников\n"))
-	w.Write([]byte("/api/cve/{CVE-ID}?source={SOURCE-NAME}&pkg={PKG-NAME}, т.е. указание ID CVE, источника ифнормации (Redhat, Ubuntu, NIST, Debian), и имени пакета\n"))
+func handlers() http.Handler {
+	mux := http.NewServeMux()
+	mux.Handle("/api/update", logWrapper(handleUpdate))
+	mux.Handle("/api/cve/", logWrapper(handleGetCve))
+	return mux
 }
 
 func handleUpdate(w http.ResponseWriter, r *http.Request) {
