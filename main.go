@@ -93,7 +93,7 @@ func handlers() http.Handler {
 	return mux
 }
 
-func handleUpdate(w http.ResponseWriter, r *http.Request) {
+func handleUpdate(w http.ResponseWriter, r *http.Request) { //have to reject when update already performs
 	for _, c := range collectors {
 		rlog.Info("Collecting CVE data for:", "\""+c.Name()+"\"")
 		resp, err := c.Collect()
