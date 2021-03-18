@@ -71,24 +71,20 @@ func (p *redhat) Descr() string {
 }
 
 func (p *redhat) Collect() (interface{}, error) {
-	//redhat.Collect does not collect any data
+	//redhat.Collect does not collect any data due to it accessable by direct link
 	return nil, nil
 }
 
 func (p *redhat) Query(cveID, pkgName string, rdb *rejson.Handler) ([]byte, error) {
 	cveName := "CVE-" + cveID
-	c := http.Client{}
 	url := fmt.Sprintf("%s/%s.json", p.url, cveName)
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := c.Do(req)
+	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 	data := rhCve{}
+	//read response data and unmarshall it
 	err = json.NewDecoder(resp.Body).Decode(&data)
 	if err != nil {
 		return nil, err
@@ -104,6 +100,7 @@ func (p *redhat) Query(cveID, pkgName string, rdb *rejson.Handler) ([]byte, erro
 		}
 		data.Packages = p
 	}
+	//and marshall edited data to json
 	j, err := json.Marshal(data)
 	if err != nil {
 		return nil, err

@@ -78,13 +78,8 @@ func (p *nist) Descr() string {
 
 func (p *nist) Collect() (interface{}, error) {
 	//get gzip file
-	req, err := http.NewRequest("GET", p.url, nil)
-	if err != nil {
-		return nil, err
-	}
-	c := http.Client{}
 	rlog.Info("Fetching nist file")
-	resp, err := c.Do(req)
+	resp, err := http.Get(p.url)
 	if err != nil {
 		return nil, err
 	}
@@ -105,13 +100,11 @@ func (p *nist) Collect() (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	//return []nistCpeList
+	//transfon data cpe23uri is first level key
+	//return map[string/cp323uri/]nistCpeList
 	cpes := make(map[string][]nistCpeData)
 	rlog.Debug(len(data["matches"]))
-	for i, cpe23uri := range data["matches"] {
-		if i%100 == 0 {
-			rlog.Debug(i, "items is parsed")
-		}
+	for _, cpe23uri := range data["matches"] {
 		if _, ok := cpes[cpe23uri.Uri]; ok {
 			cpes[cpe23uri.Uri] = append(
 				cpes[cpe23uri.Uri],
@@ -134,21 +127,23 @@ func (p *nist) Collect() (interface{}, error) {
 				cpe23uri.Cpes,
 			})
 	}
-	rlog.Debug("RETURN")
 	return cpes, nil
 }
 
 func (p *nist) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, error) {
+	//with nist source I could not understand the format so I ignore pkg and get only cpe23uri
+	// generages path for redis query like ["cpe:a:......."]
 	path := fmt.Sprintf("[\"%s\"]", cveId)
+	rlog.Debug("redis path for", p.Name(), "is", path)
+	//request to redis database
 	rawData, err := rdb.JSONGet(p.Name(), path)
-	rlog.Debug(p.Name(), path)
 	if err != nil {
 		return nil, err
 	}
+	//JSONGet returns interface{} so cast it to []byte
 	data, ok := rawData.([]byte)
 	if !ok {
-		rlog.Debug("***", data)
-		return nil, errors.New("Can't cast to []byte")
+		return nil, errors.New("Can't case redis response to []byte ")
 	}
 	return data, nil
 }

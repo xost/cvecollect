@@ -38,13 +38,9 @@ func (d *debian) Name() string {
 	return d.name
 }
 
+//reads big json from source url
 func (d *debian) read(data *[]byte) (int, error) {
-	c := http.Client{}
-	req, err := http.NewRequest("GET", d.url, nil)
-	if err != nil {
-		return 0, err
-	}
-	resp, err := c.Do(req)
+	resp, err := http.Get(d.url)
 	if err != nil {
 		return 0, err
 	}
@@ -57,6 +53,7 @@ func (d *debian) read(data *[]byte) (int, error) {
 	return len(*data), nil
 }
 
+//parses json and transform data
 func (d *debian) parse(raw []byte) (*debCve, error) {
 	data := debCve{}
 	j := debResponse{}
@@ -64,6 +61,7 @@ func (d *debian) parse(raw []byte) (*debCve, error) {
 	if err != nil {
 		return nil, err
 	}
+	// cveID is first level key and packages is second level keys
 	for pkgName, cveMap := range j {
 		for cveId, cveData := range cveMap {
 			if _, ok := data[cveId]; !ok {
@@ -75,30 +73,36 @@ func (d *debian) parse(raw []byte) (*debCve, error) {
 	return &data, nil
 }
 
+//read big json, parse and transform
 func (d *debian) Collect() (interface{}, error) {
 	data := make([]byte, 0)
+	//read big json
 	_, err := d.read(&data)
 	if err != nil {
 		return nil, err
 	}
+	//unmarshal and transform
 	resp, err := d.parse(data)
 	return *resp, err
 }
 
 func (d *debian) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, error) {
-	cveName := "CVE-" + cveId
+	cveName := "CVE-" + cveId //if cveID="2018-10906" then cveName="CVE-2018-10906"
+	// generages path for redis query like ["CVE-2018-10906"]
 	path := fmt.Sprintf("[\"%s\"]", cveName)
 	if pkgName != "" {
 		path += fmt.Sprintf("[\"%s\"]", pkgName)
 	}
-	rlog.Debug(path)
+	rlog.Debug("redis path for", d.Name(), "is", path)
+	//request to redis database
 	cveData, err := rdb.JSONGet(d.Name(), path)
 	if err != nil {
 		return nil, err
 	}
+	//JSONGet returns interface{} so cast it to []byte
 	cveBytes, ok := cveData.([]byte)
 	if !ok {
-		return nil, errors.New("Can't case ....: ")
+		return nil, errors.New("Can't case redis response to []byte ")
 	}
 	return cveBytes, nil
 }

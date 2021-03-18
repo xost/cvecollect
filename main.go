@@ -78,8 +78,8 @@ func logWrapper(n http.HandlerFunc) http.Handler {
 		func(w http.ResponseWriter, r *http.Request) {
 			rlog.Debug(
 				"Method:", r.Method,
-				"Path:", r.URL.EscapedPath(),
-				"Query", r.URL.RawQuery,
+				" Path:", r.URL.EscapedPath(),
+				" Query:", r.URL.RawQuery,
 			)
 			n.ServeHTTP(w, r)
 		},
@@ -88,7 +88,7 @@ func logWrapper(n http.HandlerFunc) http.Handler {
 
 func handlers() http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle("/api/update", logWrapper(handleUpdate))
+	mux.Handle("/api/update/", logWrapper(handleUpdate))
 	mux.Handle("/api/cve/", logWrapper(handleGetCve))
 	return mux
 }
@@ -101,6 +101,7 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 			rlog.Error(err)
 			continue
 		}
+		//store data to redis database. source name is zero level key
 		res, err := rh.JSONSet(c.Name(), ".", resp)
 		if err != nil || res.(string) != "OK" {
 			rlog.Error("Failed to update CVE data")
@@ -114,25 +115,32 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("CVE data was updated"))
 }
 
-func handleGetCve(w http.ResponseWriter, r *http.Request) { //todo cut and devide this func
-	pathElements := strings.Split(r.URL.EscapedPath(), "/")
+func handleGetCve(w http.ResponseWriter, r *http.Request) {
+	//get path's elements
+	path := r.URL.EscapedPath()
+	path = strings.Trim(path, "/")
+	pathElements := strings.Split(path, "/")
 	if len(pathElements) != 4 {
 		rlog.Error("Bad request")
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Bad request"))
 		return
 	}
+	//the last path's element is cveID
 	cveID := pathElements[len(pathElements)-1]
+	//get source
 	src := r.URL.Query().Get("source")
+	//get package name
 	pkg := r.URL.Query().Get("pkg")
 	rlog.Debug("cveID:", cveID, ", source:", src, ", pkg:", pkg)
 	var sources map[string]Collector
-	if src != "" {
+	if src != "" { //if source not empty.
 		sources = map[string]Collector{src: collectors[src]}
-	} else {
+	} else { //scan all sources
 		sources = collectors
 	}
 	json := make([]byte, 0)
+	//searching...
 	for name, c := range sources {
 		jsonRaw, err := c.Query(cveID, pkg, rh)
 		if err != nil {
@@ -140,12 +148,7 @@ func handleGetCve(w http.ResponseWriter, r *http.Request) { //todo cut and devid
 			continue
 		}
 		json = append(json, jsonRaw...)
-		rlog.Debug(jsonRaw)
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Write(json)
-}
-
-func storeData(rdb *rejson.Handler) (string, error) {
-	return "", nil
 }
