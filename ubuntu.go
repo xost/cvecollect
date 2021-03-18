@@ -311,23 +311,41 @@ func (u *ubuntu) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, erro
 	}
 	cveBytes, ok := cveData.([]byte)
 	if !ok {
-		return nil, errors.New("Can't case ....: ")
+		return nil, errors.New("Can't cast ....: ")
 	}
+	//if pkgName is not empty doing one more request to redis
+	//like ["CVE-2018-10906"]["Packages"]["fuse3"] to get only the package
 	if pkgName != "" {
 		c := uCveData{}
 		err := json.Unmarshal(cveBytes, &c)
 		if err != nil {
 			return nil, err
 		}
-		for name, _ := range c.Packages {
-			rlog.Debug(name)
-			if name != pkgName {
-				delete(c.Packages, name)
-			}
+		pkgsPath := fmt.Sprintf("%s[\"Packages\"][\"%s\"]", path, pkgName)
+		rlog.Debug("pkgsPath=", pkgsPath)
+		rawPkgs, err := rdb.JSONGet(u.Name(), pkgsPath)
+		if err != nil {
+			return nil, err
 		}
-		if len(c.Packages) < 1 {
-			return nil, errors.New("requested package does not found")
+		pkgs := make([]uRelease, 0)
+		err = json.Unmarshal(rawPkgs.([]byte), &pkgs)
+		if err != nil {
+			return nil, err
 		}
+		if len(pkgs) > 0 { //if package was found
+			c.Packages[pkgName] = pkgs
+		} else { //if not delete all other packages
+			c.Packages = uPackages{}
+		}
+		//for name, _ := range c.Packages {
+		//	rlog.Debug(name)
+		//	if name != pkgName {
+		//		delete(c.Packages, name)
+		//	}
+		//}
+		//if len(c.Packages) < 1 {
+		//	return nil, errors.New("requested package does not found")
+		//}
 		cveBytes, err = json.Marshal(&c)
 		if err != nil {
 			return nil, err
