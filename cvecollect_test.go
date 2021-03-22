@@ -348,7 +348,7 @@ func makeQueryUrl(source, cveID, pkg string) string {
 	return fmt.Sprintf("/api/cve/%s?source=%s&pkg=%s", cveID, source, pkg)
 }
 
-func oTestCollect(t *testing.T) {
+func TestCollect(t *testing.T) {
 	srv := httptest.NewServer(handlers())
 	defer srv.Close()
 	resp, err := http.Get(srv.URL + "/api/update")

@@ -120,10 +120,10 @@ func handleGetCve(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.EscapedPath()
 	path = strings.Trim(path, "/")
 	pathElements := strings.Split(path, "/")
-	if len(pathElements) != 4 {
+	if len(pathElements) != 3 {
 		rlog.Error("Bad request")
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Bad request"))
+		w.Write([]byte("Bad request\n"))
 		return
 	}
 	//the last path's element is cveID

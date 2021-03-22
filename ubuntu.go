@@ -298,6 +298,9 @@ func (u *ubuntu) parseText(data []byte) *uCve {
 			cve = uCve{cveName: cveData}
 		}
 	}
+	if cveName == "CVE-2018-10906" {
+		rlog.Debug(pkgs)
+	}
 	return &cve
 }
 
@@ -321,19 +324,21 @@ func (u *ubuntu) Query(cveId, pkgName string, rdb *rejson.Handler) ([]byte, erro
 		if err != nil {
 			return nil, err
 		}
-		pkgsPath := fmt.Sprintf("%s[\"Packages\"][\"%s\"]", path, pkgName)
+		pkgsPath := fmt.Sprintf("%s[\"packages\"][\"%s\"]", path, pkgName)
 		rlog.Debug("pkgsPath=", pkgsPath)
 		rawPkgs, err := rdb.JSONGet(u.Name(), pkgsPath)
 		if err != nil {
 			return nil, err
 		}
-		pkgs := make([]uRelease, 0)
-		err = json.Unmarshal(rawPkgs.([]byte), &pkgs)
+		rlss := make([]uRelease, 0)
+		err = json.Unmarshal(rawPkgs.([]byte), &rlss)
 		if err != nil {
 			return nil, err
 		}
-		if len(pkgs) > 0 { //if package was found
-			c.Packages[pkgName] = pkgs
+		if len(rlss) > 0 { //if package was found
+			c.Packages = map[string][]uRelease{
+				pkgName: rlss,
+			}
 		} else { //if not delete all other packages
 			c.Packages = uPackages{}
 		}
