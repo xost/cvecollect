@@ -85,8 +85,8 @@ func (u *ubuntu) Collect() (interface{}, error) { //todo: put out of ubuntu obje
 			continue
 		}
 		linkCh := make(chan string, 10)
-		dataCh := make(chan []byte, 200)
-		respCh := make(chan *uCve, 100)
+		dataCh := make(chan []byte, 10)
+		respCh := make(chan *uCve, 10)
 		var wgr sync.WaitGroup
 		//parse content and search data in <code></code> tags
 		go func() {
