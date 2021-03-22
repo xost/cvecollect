@@ -18,9 +18,8 @@ lint:
 run:
 	docker-compose up --build -d
 
-stop:
+down:
 	docker-compose down
-	echo "FUCK"
 
 logs:
 	docker logs --follow cvecollect_app_1
