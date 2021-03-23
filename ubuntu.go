@@ -137,7 +137,7 @@ func (u *ubuntu) Collect() (interface{}, error) { //todo: put out of ubuntu obje
 		go func() {
 			for i, link := range links {
 				linkCh <- u.url.Scheme + "://" + u.url.Host + link
-				if i%100 == 0 {
+				if i%1000 == 0 {
 					rlog.Info(i, "link is parsed")
 				}
 			}
@@ -152,9 +152,6 @@ func (u *ubuntu) Collect() (interface{}, error) { //todo: put out of ubuntu obje
 					rlog.Debug("key:", k, "is exists")
 				}
 				resp[k] = v
-			}
-			if len(resp)%100 == 0 {
-				rlog.Debug("CVEs collected:", len(resp))
 			}
 		}
 	}
