@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/nitishm/go-rejson"
@@ -90,16 +89,21 @@ func (p *nist) Collect() (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	rawData, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-	//parse file to struct
 	data := make(map[string][]nistCpeList)
-	err = json.Unmarshal(rawData, &data)
+	err = json.NewDecoder(r).Decode(&data)
 	if err != nil {
 		return nil, err
 	}
+	//***rawData, err := ioutil.ReadAll(r)
+	//***if err != nil {
+	//***	return nil, err
+	//***}
+	//***//parse file to struct
+	//***data := make(map[string][]nistCpeList)
+	//***err = json.Unmarshal(rawData, &data)
+	//***if err != nil {
+	//***	return nil, err
+	//***}
 	//transfon data cpe23uri is first level key
 	//return map[string/cp323uri/]nistCpeList
 	cpes := make(map[string][]nistCpeData)
