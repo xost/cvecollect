@@ -85,10 +85,10 @@ func (u *ubuntu) Collect() (interface{}, error) { //todo: put out of ubuntu obje
 			continue
 		}
 		linkCh := make(chan string, 10)
-		dataCh := make(chan []byte, 200)
-		respCh := make(chan *uCve, 100)
-		var wgr sync.WaitGroup
+		dataCh := make(chan []byte, 10)
+		respCh := make(chan *uCve, 10)
 		//parse content and search data in <code></code> tags
+		var wgr sync.WaitGroup
 		go func() {
 			for d := range dataCh {
 				wgr.Add(1)
@@ -131,16 +131,19 @@ func (u *ubuntu) Collect() (interface{}, error) { //todo: put out of ubuntu obje
 		//}()
 
 		//links = links[8000 : len(links)-1] //plug
+
 		rlog.Info("total links:", len(links))
 		//pass through all links
-		for i, link := range links {
-			linkCh <- u.url.Scheme + "://" + u.url.Host + link
-			if i%1000 == 0 {
-				rlog.Info(i, "link is parsed")
+		go func() {
+			for i, link := range links {
+				linkCh <- u.url.Scheme + "://" + u.url.Host + link
+				if i%100 == 0 {
+					rlog.Info(i, "link is parsed")
+				}
 			}
-		}
-		//close channel for quit all goroutines
-		close(linkCh)
+			//close channel for quit all goroutines
+			close(linkCh)
+		}()
 
 		//collect ann data from response channel
 		for r := range respCh {
@@ -149,6 +152,9 @@ func (u *ubuntu) Collect() (interface{}, error) { //todo: put out of ubuntu obje
 					rlog.Debug("key:", k, "is exists")
 				}
 				resp[k] = v
+			}
+			if len(resp)%100 == 0 {
+				rlog.Debug("CVEs collected:", len(resp))
 			}
 		}
 	}
