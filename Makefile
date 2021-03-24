@@ -24,6 +24,9 @@ down:
 logs:
 	docker logs --follow cvecollect_app_1
 
+test:
+	PORT=$(PORT) RLOG_LOG_LEVEL=$(RLOG_LOG_LEVEL) go test -race -v -timeout=5h -coverprofile=cover.out
+
 tests:
 	docker run -d -p 6379:6379 --name rejson redislabs/rejson:latest 
 	PORT=$(PORT) RLOG_LOG_LEVEL=$(RLOG_LOG_LEVEL) go test -race -v -timeout=5h -coverprofile=cover.out || docker stop rejson && docker rm rejson

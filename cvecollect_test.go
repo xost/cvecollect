@@ -401,8 +401,10 @@ func TestQuery(t *testing.T) {
 	srv := httptest.NewServer(handlers())
 	defer srv.Close()
 	for _, tr := range cases {
+		rlog.Info(tr.descr)
 		url := makeQueryUrl(tr.source, tr.cveID, tr.pkg)
-		resp, err := http.Get(srv.URL + url)
+		//resp, err := http.Get(srv.URL + url)
+		resp, err := http.Get("http://127.0.0.1:3000" + url)
 		if err != nil {
 			t.Error(tr.descr, err)
 			continue

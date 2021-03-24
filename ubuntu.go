@@ -301,9 +301,6 @@ func (u *ubuntu) parseText(data []byte) *uCve {
 			cve = uCve{cveName: cveData}
 		}
 	}
-	if cveName == "CVE-2018-10906" {
-		rlog.Debug(pkgs)
-	}
 	return &cve
 }
 

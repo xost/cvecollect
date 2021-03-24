@@ -56,10 +56,10 @@ func init() {
 	rh.SetRedigoClient(db)
 
 	collectors = map[string]Collector{
-		//"debian": NewDebian(),
+		"debian": NewDebian(),
 		"ubuntu": NewUbuntu(),
-		//"redhat": NewRedhat(),
-		//"nist":   NewNist(),
+		"redhat": NewRedhat(),
+		"nist":   NewNist(),
 	}
 }
 
